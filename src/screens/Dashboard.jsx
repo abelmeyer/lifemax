@@ -9,7 +9,7 @@ import { useAuth } from "../lib/AuthContext";
 import { syncAvatarProgress } from "../lib/avatar";
 import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
-import { syncEconomy } from "../lib/economy";
+import { syncEconomy, fetchEquippedItems } from "../lib/economy";
 import { fetchMealsForDate, sumMacros, weeklyProteinAverage, NUTRITION_TARGETS } from "../lib/nutrition";
 import { fetchPhotos, getSignedUrls } from "../lib/photos";
 
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [justUnlocked, setJustUnlocked] = useState([]);
   const [economy, setEconomy] = useState(null);
   const [auraGained, setAuraGained] = useState(0);
+  const [equippedCosmetics, setEquippedCosmetics] = useState([]);
   const [totals, setTotals] = useState({ protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
   const [weeklyProtein, setWeeklyProtein] = useState(0);
   const [latestPhotoUrl, setLatestPhotoUrl] = useState(null);
@@ -29,9 +30,10 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [avatarResult, economyResult, meals, weeklyAvg, photos] = await Promise.all([
+      const [avatarResult, economyResult, equipped, meals, weeklyAvg, photos] = await Promise.all([
         syncAvatarProgress(user.id),
         syncEconomy(user.id),
+        fetchEquippedItems(user.id),
         fetchMealsForDate(user.id, todayStr()),
         weeklyProteinAverage(user.id),
         fetchPhotos(user.id),
@@ -39,6 +41,7 @@ export default function Dashboard() {
       if (!mounted) return;
 
       setAvatarState(avatarResult.avatarState);
+      setEquippedCosmetics(equipped);
       setHabitStreaks(avatarResult.habitStreaks);
       if (avatarResult.leveledUpToday) {
         setJustLeveledUp(true);
@@ -88,23 +91,19 @@ export default function Dashboard() {
 
       <Link
         to="/store"
-        className="mb-3 flex items-center justify-between rounded-card border border-border bg-surface px-4 py-2.5 transition-colors duration-200 hover:bg-white/[0.03]"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+        className="card-shadow mb-3 flex items-center justify-between rounded-card border border-border bg-surface px-4 py-2.5 transition-colors duration-200 hover:bg-white/[0.03]"
       >
         <div className="flex items-center gap-1.5 text-accent">
           <SparkleIcon width={15} height={15} />
           <span className="font-mono text-[15px] font-semibold">{economy.aura_balance}</span>
           <span className="text-[11px] text-muted">aura</span>
-          {auraGained > 0 && <span className="text-[11px] font-medium text-success">+{auraGained}</span>}
+          {auraGained > 0 && <span className="pop-in text-[11px] font-medium text-success">+{auraGained}</span>}
         </div>
         <span className="text-[11px] text-muted">Visit Store →</span>
       </Link>
 
       <div className="mb-3 flex items-stretch gap-3">
-        <div
-          className="relative flex-1 rounded-card border border-border bg-surface p-2"
-          style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-        >
+        <div className="card-shadow relative flex-1 rounded-card border border-border bg-surface p-3">
           {economy.prestige_level >= 1 && (
             <div
               className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium"
@@ -120,30 +119,25 @@ export default function Dashboard() {
               habitStreaks={habitStreaks}
               justLeveledUp={justLeveledUp}
               justUnlocked={justUnlocked}
+              equippedCosmetics={equippedCosmetics}
             />
           </div>
         </div>
 
         <div className="flex w-[104px] flex-col gap-2.5">
-          <div
-            className="rounded-card border border-border bg-surface px-2 py-3 text-center"
-            style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-          >
+          <div className="card-shadow rounded-card border border-border bg-surface px-2 py-3 text-center">
             <p className="font-mono text-[24px] font-semibold text-accent">{avatarState.streak}</p>
             <p className="text-[10px] uppercase tracking-wide text-muted">day streak</p>
           </div>
 
-          <div
-            className="rounded-card border border-border bg-surface px-2 py-3 text-center"
-            style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-          >
+          <div className="card-shadow rounded-card border border-border bg-surface px-2 py-3 text-center">
             <p className="font-mono text-[20px] font-semibold text-body">Lv {avatarState.level}</p>
             <p className="text-[10px] uppercase tracking-wide text-muted">level</p>
           </div>
 
           <Link
             to="/photos"
-            className="relative flex flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-card border border-dashed border-border py-3 text-muted transition-colors duration-200 hover:bg-white/[0.03]"
+            className="card-shadow relative flex flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-card border border-dashed border-border py-3 text-muted transition-colors duration-200 hover:bg-white/[0.03]"
           >
             {latestPhotoUrl ? (
               <img src={latestPhotoUrl} alt="Latest progress photo" className="absolute inset-0 h-full w-full object-cover" />
@@ -161,7 +155,7 @@ export default function Dashboard() {
 
       {justLeveledUp && (
         <div
-          className="fade-in mb-4 flex items-center justify-center gap-2 rounded-card border px-4 py-3 text-[13px] font-medium"
+          className="pop-in mb-4 flex items-center justify-center gap-2 rounded-card border px-4 py-3 text-[13px] font-medium"
           style={{ borderColor: "rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)", color: "#34d399" }}
         >
           <TrophyIcon width={16} height={16} />
@@ -171,10 +165,7 @@ export default function Dashboard() {
 
       <WeekStrip userId={user.id} />
 
-      <div
-        className="mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-      >
+      <div className="card-shadow mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5">
         <h3 className="text-[15px] font-medium text-body">Today's nutrition</h3>
         <MacroBar label="Protein" value={totals.protein_g} target={NUTRITION_TARGETS.protein} />
         <MacroBar label="Carbs" value={totals.carbs_g} target={NUTRITION_TARGETS.carbs} />

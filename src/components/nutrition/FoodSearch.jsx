@@ -51,8 +51,7 @@ export default function FoodSearch({ onLog }) {
 
   return (
     <div
-      className="mb-3 rounded-card border border-border bg-surface p-5"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 rounded-card border border-border bg-surface p-5"
     >
       <h3 className="mb-3 text-[15px] font-medium text-body">Search a food</h3>
 
@@ -74,7 +73,7 @@ export default function FoodSearch({ onLog }) {
         <button
           type="submit"
           disabled={searching}
-          className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-40"
+          className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-[0.97] disabled:opacity-40"
         >
           {searching ? "…" : "Go"}
         </button>
@@ -132,7 +131,7 @@ export default function FoodSearch({ onLog }) {
               type="button"
               onClick={handleLog}
               disabled={logging}
-              className="flex-1 rounded-btn bg-accent py-2 text-[13px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-40"
+              className="flex-1 rounded-btn bg-accent py-2 text-[13px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-[0.97] disabled:opacity-40"
             >
               {logging ? "Logging…" : "Log it"}
             </button>

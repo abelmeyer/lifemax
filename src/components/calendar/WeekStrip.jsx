@@ -32,8 +32,7 @@ export default function WeekStrip({ userId }) {
       <button
         type="button"
         onClick={() => setShowMonth(true)}
-        className="mb-3 w-full rounded-card border border-border bg-surface p-5 text-left transition-colors duration-200 hover:bg-white/[0.03]"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+        className="card-shadow mb-3 w-full rounded-card border border-border bg-surface p-5 text-left transition duration-200 hover:bg-white/[0.03] active:scale-[0.99]"
       >
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[15px] font-medium text-body">This week</h3>

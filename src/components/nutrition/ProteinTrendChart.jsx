@@ -11,8 +11,7 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="rounded-btn border border-border bg-surface px-3 py-2 text-[12px]"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow rounded-btn border border-border bg-surface px-3 py-2 text-[12px]"
     >
       <p className="text-muted">{formatTick(label)}</p>
       <p className="font-mono text-body">{payload[0].value}g protein</p>
@@ -38,8 +37,7 @@ export default function ProteinTrendChart({ userId }) {
 
   return (
     <div
-      className="mb-3 rounded-card border border-border bg-surface p-5"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 rounded-card border border-border bg-surface p-5"
     >
       <h3 className="mb-3 text-[15px] font-medium text-body">30-day protein</h3>
       <div style={{ height: 130 }}>

@@ -229,3 +229,59 @@ export async function purchaseItem(userId, item, economy) {
   if (error) throw error;
   return data;
 }
+
+// Equips an item, unequipping any other owned item that shares its slot
+// (store_items.category) — only one item per slot can be equipped at once.
+// allItems is the full store catalog, used to resolve which other item ids
+// share this item's slot without a join.
+export async function equipItem(userId, item, allItems) {
+  const sameSlotIds = allItems.filter((i) => i.category === item.category && i.id !== item.id).map((i) => i.id);
+
+  if (sameSlotIds.length > 0) {
+    const { error: unequipErr } = await supabase
+      .from("owned_items")
+      .update({ equipped: false })
+      .eq("user_id", userId)
+      .in("item_id", sameSlotIds);
+    if (unequipErr) throw unequipErr;
+  }
+
+  const { data, error } = await supabase
+    .from("owned_items")
+    .update({ equipped: true })
+    .eq("user_id", userId)
+    .eq("item_id", item.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function unequipItem(userId, item) {
+  const { data, error } = await supabase
+    .from("owned_items")
+    .update({ equipped: false })
+    .eq("user_id", userId)
+    .eq("item_id", item.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Full store_items rows for whatever this user currently has equipped —
+// what the avatar renders as cosmetic layers.
+export async function fetchEquippedItems(userId) {
+  const { data: owned, error: ownedErr } = await supabase
+    .from("owned_items")
+    .select("item_id")
+    .eq("user_id", userId)
+    .eq("equipped", true);
+  if (ownedErr) throw ownedErr;
+  if (!owned || owned.length === 0) return [];
+
+  const ids = owned.map((o) => o.item_id);
+  const { data: items, error } = await supabase.from("store_items").select("*").in("id", ids);
+  if (error) throw error;
+  return items ?? [];
+}

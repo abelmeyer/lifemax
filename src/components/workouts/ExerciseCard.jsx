@@ -13,6 +13,7 @@ export default function ExerciseCard({ exercise, userId }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [justHitPR, setJustHitPR] = useState(false);
+  const [justLoggedId, setJustLoggedId] = useState(null);
 
   async function toggleExpand() {
     const next = !expanded;
@@ -57,6 +58,9 @@ export default function ExerciseCard({ exercise, userId }) {
         bestWeight: Math.max(priorBest, weightNum),
       }));
 
+      setJustLoggedId(newSet.id);
+      setTimeout(() => setJustLoggedId(null), 360);
+
       if (weightNum > priorBest) {
         setJustHitPR(true);
         setTimeout(() => setJustHitPR(false), 2500);
@@ -74,8 +78,7 @@ export default function ExerciseCard({ exercise, userId }) {
 
   return (
     <div
-      className="mb-3 overflow-hidden rounded-card border border-border bg-surface"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 overflow-hidden rounded-card border border-border bg-surface"
     >
       <button
         type="button"
@@ -120,7 +123,7 @@ export default function ExerciseCard({ exercise, userId }) {
                   history.todaysSets.map((s, i) => (
                     <div
                       key={s.id ?? i}
-                      className="flex items-center justify-between rounded-btn border px-3 py-2"
+                      className={`flex items-center justify-between rounded-btn border px-3 py-2 ${s.id === justLoggedId ? "pop-in" : ""}`}
                       style={{
                         borderColor: "rgba(52,211,153,0.3)",
                         background: "rgba(52,211,153,0.08)",
@@ -171,7 +174,7 @@ export default function ExerciseCard({ exercise, userId }) {
                   <button
                     type="submit"
                     disabled={saving || !weight || !reps}
-                    className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-40"
+                    className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-95 disabled:opacity-40"
                   >
                     Log
                   </button>
@@ -180,7 +183,7 @@ export default function ExerciseCard({ exercise, userId }) {
                 <button
                   type="button"
                   onClick={() => setAdding(true)}
-                  className="w-full rounded-btn border border-border py-2.5 text-[14px] font-medium text-accent transition-colors duration-200 hover:bg-white/[0.03]"
+                  className="w-full rounded-btn border border-border py-2.5 text-[14px] font-medium text-accent transition duration-200 hover:bg-white/[0.03] active:scale-[0.99]"
                 >
                   + Add Set
                 </button>

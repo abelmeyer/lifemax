@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import ScreenHeader from "../components/ScreenHeader";
 import { ChevronLeftIcon, SparkleIcon, StarIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
-import { fetchEconomy, fetchStoreItems, fetchOwnedItems, purchaseItem } from "../lib/economy";
+import { fetchEconomy, fetchStoreItems, fetchOwnedItems, purchaseItem, equipItem, unequipItem } from "../lib/economy";
 
 const TIER_LABELS = {
   1: "Basic Fits",
@@ -16,9 +15,10 @@ export default function Store() {
   const { user } = useAuth();
   const [economy, setEconomy] = useState(null);
   const [items, setItems] = useState([]);
-  const [ownedIds, setOwnedIds] = useState(new Set());
+  const [ownedById, setOwnedById] = useState({});
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState(null);
+  const [justActionedId, setJustActionedId] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function Store() {
       if (!mounted) return;
       setEconomy(econ);
       setItems(storeItems);
-      setOwnedIds(new Set(owned.map((o) => o.item_id)));
+      setOwnedById(Object.fromEntries(owned.map((o) => [o.item_id, o])));
       setLoading(false);
     })();
     return () => {
@@ -40,13 +40,55 @@ export default function Store() {
     };
   }, [user.id]);
 
+  function flashAction(itemId) {
+    setJustActionedId(itemId);
+    setTimeout(() => setJustActionedId(null), 360);
+  }
+
   async function handleBuy(item) {
     setError(null);
     setPendingId(item.id);
     try {
       const updated = await purchaseItem(user.id, item, economy);
       setEconomy(updated);
-      setOwnedIds((prev) => new Set([...prev, item.id]));
+      setOwnedById((prev) => ({ ...prev, [item.id]: { item_id: item.id, equipped: false } }));
+      flashAction(item.id);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleEquip(item) {
+    setError(null);
+    setPendingId(item.id);
+    try {
+      await equipItem(user.id, item, items);
+      setOwnedById((prev) => {
+        const next = { ...prev };
+        for (const i of items) {
+          if (i.category === item.category && next[i.id]) {
+            next[i.id] = { ...next[i.id], equipped: i.id === item.id };
+          }
+        }
+        return next;
+      });
+      flashAction(item.id);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleUnequip(item) {
+    setError(null);
+    setPendingId(item.id);
+    try {
+      await unequipItem(user.id, item);
+      setOwnedById((prev) => ({ ...prev, [item.id]: { ...prev[item.id], equipped: false } }));
+      flashAction(item.id);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -57,7 +99,9 @@ export default function Store() {
   if (loading) {
     return (
       <>
-        <ScreenHeader title="Store" subtitle="Spend aura on cosmetics, unlocked by prestige." />
+        <div className="mb-6 flex items-center gap-3">
+          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-body">Store</h1>
+        </div>
         <div className="flex justify-center py-10">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
         </div>
@@ -77,7 +121,7 @@ export default function Store() {
       <div className="mb-6 flex items-center gap-3">
         <Link
           to="/"
-          className="flex h-9 w-9 items-center justify-center rounded-button border border-border bg-surface text-muted transition-colors duration-200 hover:text-body"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-button border border-border bg-surface text-muted transition-colors duration-200 hover:text-body active:scale-95"
         >
           <ChevronLeftIcon width={18} height={18} />
         </Link>
@@ -87,10 +131,7 @@ export default function Store() {
         </div>
       </div>
 
-      <div
-        className="mb-6 flex items-center justify-between rounded-card border border-border bg-surface px-5 py-4"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-      >
+      <div className="card-shadow mb-6 flex items-center justify-between rounded-card border border-border bg-surface px-5 py-4">
         <div className="flex items-center gap-2 text-accent">
           <SparkleIcon width={18} height={18} />
           <span className="font-mono text-[20px] font-semibold">{economy.aura_balance}</span>
@@ -122,34 +163,67 @@ export default function Store() {
               </div>
               <div className="flex flex-col gap-2.5">
                 {tierItems.map((item) => {
-                  const owned = ownedIds.has(item.id);
+                  const owned = ownedById[item.id];
+                  const equipped = owned?.equipped ?? false;
                   const canAfford = economy.aura_balance >= item.cost_aura;
-                  const disabled = locked || owned || !canAfford || pendingId === item.id;
+                  const isPending = pendingId === item.id;
+                  const justActioned = justActionedId === item.id;
+
+                  let buttonLabel;
+                  let buttonAction;
+                  let buttonColor;
+                  let buttonBorder;
+                  let disabled = isPending;
+
+                  if (owned) {
+                    if (equipped) {
+                      buttonLabel = "Equipped";
+                      buttonAction = () => handleUnequip(item);
+                      buttonColor = "#34d399";
+                      buttonBorder = "rgba(52,211,153,0.35)";
+                    } else {
+                      buttonLabel = "Equip";
+                      buttonAction = () => handleEquip(item);
+                      buttonColor = "#5ab4ff";
+                      buttonBorder = "rgba(90,180,255,0.35)";
+                    }
+                  } else if (locked) {
+                    buttonLabel = "Locked";
+                    buttonAction = undefined;
+                    buttonColor = "#6e7a8a";
+                    buttonBorder = "rgba(255,255,255,0.07)";
+                    disabled = true;
+                  } else {
+                    buttonLabel = null;
+                    buttonAction = () => handleBuy(item);
+                    buttonColor = canAfford ? "#5ab4ff" : "#6e7a8a";
+                    buttonBorder = "rgba(255,255,255,0.07)";
+                    disabled = disabled || !canAfford;
+                  }
+
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-4"
-                      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)", opacity: locked ? 0.5 : 1 }}
+                      className="card-shadow flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-4 transition-opacity duration-200"
+                      style={{ opacity: locked ? 0.5 : 1 }}
                     >
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-body">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-[13px] font-medium text-body">{item.name}</p>
+                          <span className="shrink-0 rounded-pill bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                            {item.category}
+                          </span>
+                        </div>
                         <p className="mt-0.5 text-[11px] text-muted leading-relaxed">{item.description}</p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleBuy(item)}
+                        onClick={buttonAction}
                         disabled={disabled}
-                        className="flex shrink-0 items-center gap-1.5 rounded-button border border-border px-3 py-2 text-[12px] font-medium transition-colors duration-200 disabled:cursor-not-allowed"
-                        style={{
-                          color: owned ? "#34d399" : locked || !canAfford ? "#6e7a8a" : "#5ab4ff",
-                          borderColor: owned ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.07)",
-                        }}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-button border px-3 py-2 text-[12px] font-medium transition-colors duration-200 disabled:cursor-not-allowed active:scale-95 ${justActioned ? "pop-in" : ""}`}
+                        style={{ color: buttonColor, borderColor: buttonBorder }}
                       >
-                        {owned ? (
-                          "Owned"
-                        ) : locked ? (
-                          "Locked"
-                        ) : (
+                        {buttonLabel ?? (
                           <>
                             <SparkleIcon width={12} height={12} />
                             {item.cost_aura}

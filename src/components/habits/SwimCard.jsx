@@ -3,8 +3,7 @@ import { WEEKLY_SWIM_TARGET } from "../../lib/habits";
 export default function SwimCard({ count, streak }) {
   return (
     <div
-      className="mb-3 rounded-card border border-border bg-surface p-5"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 rounded-card border border-border bg-surface p-5"
     >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[15px] font-medium text-body">Swims this week</h3>

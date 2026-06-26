@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { HabitsIcon } from "../icons";
 
 export default function HabitCard({
   title,
@@ -26,6 +27,16 @@ export default function HabitCard({
   const met = (value ?? 0) >= target;
   const pct = target > 0 ? Math.min(100, Math.round(((value ?? 0) / target) * 100)) : 0;
 
+  const [justCompleted, setJustCompleted] = useState(false);
+  const wasMet = useRef(met);
+  useEffect(() => {
+    if (met && !wasMet.current) {
+      setJustCompleted(true);
+      setTimeout(() => setJustCompleted(false), 1400);
+    }
+    wasMet.current = met;
+  }, [met]);
+
   async function handleSave() {
     const num = parseInt(draft, 10);
     if (Number.isNaN(num) || num < 0) return;
@@ -46,11 +57,17 @@ export default function HabitCard({
 
   return (
     <div
-      className="mb-3 rounded-card border border-border bg-surface p-5"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 rounded-card border border-border bg-surface p-5"
     >
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[15px] font-medium text-body">{title}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-[15px] font-medium text-body">{title}</h3>
+          {met && (
+            <span className={justCompleted ? "pop-in" : undefined} style={{ color: "#34d399" }}>
+              <HabitsIcon width={13} height={13} />
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 font-mono text-[12px] text-muted">
           {streak !== undefined && (
             <span style={{ color: streak.current_streak > 0 ? "#34d399" : undefined }}>
@@ -113,7 +130,7 @@ export default function HabitCard({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-40"
+          className="rounded-btn bg-accent px-4 py-2.5 text-[14px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-95 disabled:opacity-40"
         >
           {saving ? "Saving…" : "Log"}
         </button>

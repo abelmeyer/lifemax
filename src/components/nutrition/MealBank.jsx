@@ -21,8 +21,7 @@ export default function MealBank({ onLog }) {
 
   return (
     <div
-      className="mb-3 rounded-card border border-border bg-surface p-5"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-3 rounded-card border border-border bg-surface p-5"
     >
       <h3 className="mb-3 text-[15px] font-medium text-body">Go-to meals</h3>
       <div className="flex flex-col gap-1.5">
@@ -32,7 +31,7 @@ export default function MealBank({ onLog }) {
             type="button"
             onClick={() => handleTap(meal)}
             disabled={loggingId === meal.id}
-            className="flex items-center justify-between rounded-btn border border-border bg-white/[0.03] px-3 py-2.5 text-left transition-colors duration-200 hover:bg-white/[0.06] disabled:opacity-50"
+            className="flex items-center justify-between rounded-btn border border-border bg-white/[0.03] px-3 py-2.5 text-left transition duration-200 hover:bg-white/[0.06] active:scale-[0.99] disabled:opacity-50"
           >
             <span className="text-[13px] text-body">{meal.name}</span>
             <span className="font-mono text-[11px] text-muted">

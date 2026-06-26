@@ -12,6 +12,7 @@ export default function CardioLogger({ userId }) {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [justLoggedId, setJustLoggedId] = useState(null);
 
   useEffect(() => {
     fetchCardioToday(userId).then(setSessions);
@@ -32,6 +33,8 @@ export default function CardioLogger({ userId }) {
         notes: notes || null,
       });
       setSessions((s) => [saved, ...s]);
+      setJustLoggedId(saved.id);
+      setTimeout(() => setJustLoggedId(null), 360);
       setDuration("");
       setNotes("");
     } catch {
@@ -43,8 +46,7 @@ export default function CardioLogger({ userId }) {
 
   return (
     <div
-      className="mb-6 overflow-hidden rounded-card border border-border bg-surface"
-      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      className="card-shadow mb-6 overflow-hidden rounded-card border border-border bg-surface"
     >
       <button
         type="button"
@@ -69,13 +71,13 @@ export default function CardioLogger({ userId }) {
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-5 py-4">
+        <div className="fade-in border-t border-border px-5 py-4">
           {sessions.length > 0 && (
             <div className="mb-4 flex flex-col gap-1.5">
               {sessions.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between rounded-btn bg-white/[0.03] px-3 py-2 text-[13px]"
+                  className={`flex items-center justify-between rounded-btn bg-white/[0.03] px-3 py-2 text-[13px] ${s.id === justLoggedId ? "pop-in" : ""}`}
                 >
                   <span className="text-body">{s.type}</span>
                   <span className="font-mono text-muted">{s.duration_min} min</span>
@@ -91,7 +93,7 @@ export default function CardioLogger({ userId }) {
                   key={t}
                   type="button"
                   onClick={() => setType(t)}
-                  className="shrink-0 rounded-pill border px-3 py-1.5 text-[12px] font-medium transition-colors duration-200"
+                  className="shrink-0 rounded-pill border px-3 py-1.5 text-[12px] font-medium transition duration-200 active:scale-95"
                   style={{
                     background: type === t ? "#5AB4FF" : "transparent",
                     borderColor: type === t ? "#5AB4FF" : "rgba(255,255,255,0.07)",
@@ -122,7 +124,7 @@ export default function CardioLogger({ userId }) {
             <button
               type="submit"
               disabled={saving || !duration}
-              className="rounded-btn bg-accent py-2.5 text-[14px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-40"
+              className="rounded-btn bg-accent py-2.5 text-[14px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-[0.98] disabled:opacity-40"
             >
               {saving ? "Saving…" : "Log Session"}
             </button>

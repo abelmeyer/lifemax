@@ -89,7 +89,7 @@ export default function Photos() {
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
-        className="mb-4 flex w-full items-center justify-center gap-2 rounded-btn bg-accent py-3.5 text-[15px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50"
+        className="mb-4 flex w-full items-center justify-center gap-2 rounded-btn bg-accent py-3.5 text-[15px] font-medium text-[#0d0d12] transition duration-200 hover:bg-accent-hover active:scale-[0.98] disabled:opacity-50"
       >
         <CameraIcon width={18} height={18} />
         {uploading ? "Uploading…" : "Add Today's Photo"}
@@ -106,10 +106,7 @@ export default function Photos() {
       ) : (
         <>
           {!compareMode && selected && (
-            <div
-              className="mb-3 overflow-hidden rounded-card border border-border bg-surface"
-              style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-            >
+            <div key={selected.id} className="card-shadow fade-in mb-3 overflow-hidden rounded-card border border-border bg-surface">
               <img
                 src={urls[selected.storage_path]}
                 alt={`Progress photo from ${selected.date}`}
@@ -124,11 +121,7 @@ export default function Photos() {
           {compareMode && earliest && latest && (
             <div className="mb-3 grid grid-cols-2 gap-2">
               {[earliest, latest].map((p, i) => (
-                <div
-                  key={p.id}
-                  className="overflow-hidden rounded-card border border-border bg-surface"
-                  style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-                >
+                <div key={p.id} className="card-shadow overflow-hidden rounded-card border border-border bg-surface">
                   <img
                     src={urls[p.storage_path]}
                     alt={`Progress photo from ${p.date}`}
@@ -146,7 +139,7 @@ export default function Photos() {
             <button
               type="button"
               onClick={() => setCompareMode((v) => !v)}
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-btn border border-border py-2.5 text-[13px] font-medium text-accent transition-colors duration-200 hover:bg-white/[0.03]"
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-btn border border-border py-2.5 text-[13px] font-medium text-accent transition duration-200 hover:bg-white/[0.03] active:scale-[0.99]"
             >
               <CompareIcon width={15} height={15} />
               {compareMode ? "Back to gallery" : "Compare first vs latest"}
@@ -160,7 +153,7 @@ export default function Photos() {
                   key={p.id}
                   type="button"
                   onClick={() => setSelectedId(p.id)}
-                  className="shrink-0 overflow-hidden rounded-btn border-2 transition-colors duration-200"
+                  className="shrink-0 overflow-hidden rounded-btn border-2 transition duration-200 active:scale-95"
                   style={{
                     borderColor: p.id === selectedId ? "#5ab4ff" : "rgba(255,255,255,0.07)",
                     scrollSnapAlign: "start",

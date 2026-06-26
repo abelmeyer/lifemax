@@ -13,6 +13,7 @@ export default function Nutrition() {
   const { user } = useAuth();
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [justLoggedId, setJustLoggedId] = useState(null);
 
   useEffect(() => {
     fetchMealsForDate(user.id, todayStr())
@@ -23,6 +24,8 @@ export default function Nutrition() {
   async function handleLog(meal) {
     const saved = await logMeal({ userId: user.id, date: todayStr(), ...meal });
     setMeals((m) => [...m, saved]);
+    setJustLoggedId(saved.id);
+    setTimeout(() => setJustLoggedId(null), 360);
   }
 
   async function handleDelete(id) {
@@ -47,10 +50,7 @@ export default function Nutrition() {
     <>
       <ScreenHeader title="Nutrition" subtitle="Protein and calories, tracked simply." />
 
-      <div
-        className="mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-      >
+      <div className="card-shadow mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5">
         <MacroBar label="Protein" value={totals.protein_g} target={NUTRITION_TARGETS.protein} />
         <MacroBar label="Carbs" value={totals.carbs_g} target={NUTRITION_TARGETS.carbs} />
         <MacroBar label="Fat" value={totals.fat_g} target={NUTRITION_TARGETS.fat} />
@@ -60,16 +60,13 @@ export default function Nutrition() {
       <ProteinTrendChart userId={user.id} />
 
       {meals.length > 0 && (
-        <div
-          className="mb-3 rounded-card border border-border bg-surface p-5"
-          style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
-        >
+        <div className="card-shadow mb-3 rounded-card border border-border bg-surface p-5">
           <h3 className="mb-3 text-[15px] font-medium text-body">Today's meals</h3>
           <div className="flex flex-col gap-1.5">
             {meals.map((meal) => (
               <div
                 key={meal.id}
-                className="flex items-center justify-between rounded-btn bg-white/[0.03] px-3 py-2.5"
+                className={`flex items-center justify-between rounded-btn bg-white/[0.03] px-3 py-2.5 ${meal.id === justLoggedId ? "pop-in" : ""}`}
               >
                 <div className="min-w-0">
                   <p className="truncate text-[13px] text-body">{meal.name}</p>

@@ -9,20 +9,10 @@ Personal fitness PWA. React + Vite + Tailwind + Supabase. Mobile-first, saves to
 - Sprint 3 complete: habits, per-habit streaks, evolving avatar with earned gear layers
 - Sprint 4 complete: nutrition with USDA food search + macro calculation, photos with gallery and compare view
 - Sprint 5 complete: calendar history — 7-day strip on Dashboard expands to a full month view, tap any day for workout/habits/cardio/nutrition detail, color-coded by completion.
+- Sprint 6 complete: Aura + Prestige economy and Store. Aura accrues daily/weekly from workouts, habits, swim target, and streak days; Prestige levels up weekly off 5/7 majority-habit days and never decreases. Store (linked from Dashboard, not a tab) sells placeholder cosmetics across 4 prestige-gated tiers, purchasable with aura.
 
 ## What to do tonight
 Work through the remaining sprints in order. After each sprint completes and is verified working, move to the next. Stop if you need user input you can't resolve from the codebase.
-
-## Sprint 5 — finish first (IN PROGRESS)
-Calendar on dashboard. Tap any day → detail view showing: workout sets logged, habits, swims/cardio, nutrition macros. Color-code days by completion (full = #5AB4FF, partial = dimmed accent, missed = neutral, rest = subtle). Already date-stamped data in DB — this is a query-by-date view.
-
-## Sprint 6 — Prestige + Aura economy + Store
-AURA earned: workout +50, each habit hit +20, swim target +40, streak day +10.
-PRESTIGE: +1 level per week when workout + majority of habits hit on 5/7 days. Never decreases.
-STORE tiers: Prestige 1+ basic fits, Prestige 3+ gear, Prestige 5+ premium, Prestige 10+ exclusive.
-Dashboard: prestige badge near avatar, aura counter at top.
-Tables needed: user_economy, store_items, owned_items (may already exist — check before creating).
-Seed store_items with placeholder items across all 4 tiers.
 
 ## Sprint 7 — Runway assets (SKIP tonight)
 Requires user to provide image files. Skip entirely.

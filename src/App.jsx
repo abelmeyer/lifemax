@@ -7,6 +7,7 @@ import Workouts from "./screens/Workouts";
 import Habits from "./screens/Habits";
 import Nutrition from "./screens/Nutrition";
 import Photos from "./screens/Photos";
+import Store from "./screens/Store";
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="habits" element={<Habits />} />
         <Route path="nutrition" element={<Nutrition />} />
         <Route path="photos" element={<Photos />} />
+        <Route path="store" element={<Store />} />
       </Route>
     </Routes>
   );

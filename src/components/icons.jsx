@@ -151,3 +151,29 @@ export function CalendarIcon(props) {
     </Icon>
   );
 }
+
+export function SparkleIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" />
+    </Icon>
+  );
+}
+
+export function StarIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4l2.2 4.9 5.3.6-4 3.7 1.1 5.3-4.6-2.7-4.6 2.7 1.1-5.3-4-3.7 5.3-.6L12 4z" />
+    </Icon>
+  );
+}
+
+export function StoreIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 8l1-4h14l1 4" />
+      <path d="M4 8a2.5 2.5 0 005 0 2.5 2.5 0 005 0 2.5 2.5 0 005 0 2.5 2.5 0 005 0" />
+      <path d="M5 8v11h14V8" />
+    </Icon>
+  );
+}

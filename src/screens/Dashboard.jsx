@@ -4,11 +4,12 @@ import ScreenHeader from "../components/ScreenHeader";
 import Avatar from "../components/avatar/Avatar";
 import MacroBar from "../components/MacroBar";
 import WeekStrip from "../components/calendar/WeekStrip";
-import { TrophyIcon, PhotosIcon } from "../components/icons";
+import { TrophyIcon, PhotosIcon, SparkleIcon, StarIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { syncAvatarProgress } from "../lib/avatar";
 import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
+import { syncEconomy } from "../lib/economy";
 import { fetchMealsForDate, sumMacros, weeklyProteinAverage, NUTRITION_TARGETS } from "../lib/nutrition";
 import { fetchPhotos, getSignedUrls } from "../lib/photos";
 
@@ -18,6 +19,8 @@ export default function Dashboard() {
   const [habitStreaks, setHabitStreaks] = useState({});
   const [justLeveledUp, setJustLeveledUp] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState([]);
+  const [economy, setEconomy] = useState(null);
+  const [auraGained, setAuraGained] = useState(0);
   const [totals, setTotals] = useState({ protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
   const [weeklyProtein, setWeeklyProtein] = useState(0);
   const [latestPhotoUrl, setLatestPhotoUrl] = useState(null);
@@ -26,8 +29,9 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [avatarResult, meals, weeklyAvg, photos] = await Promise.all([
+      const [avatarResult, economyResult, meals, weeklyAvg, photos] = await Promise.all([
         syncAvatarProgress(user.id),
+        syncEconomy(user.id),
         fetchMealsForDate(user.id, todayStr()),
         weeklyProteinAverage(user.id),
         fetchPhotos(user.id),
@@ -43,6 +47,12 @@ export default function Dashboard() {
       if (avatarResult.unlockedGear.length > 0) {
         setJustUnlocked(avatarResult.unlockedGear);
         setTimeout(() => setJustUnlocked([]), 1500);
+      }
+
+      setEconomy(economyResult.economy);
+      if (economyResult.auraGained > 0) {
+        setAuraGained(economyResult.auraGained);
+        setTimeout(() => setAuraGained(0), 2000);
       }
 
       setTotals(sumMacros(meals));
@@ -76,11 +86,34 @@ export default function Dashboard() {
     <>
       <ScreenHeader title="Dashboard" subtitle="Your daily overview at a glance." />
 
+      <Link
+        to="/store"
+        className="mb-3 flex items-center justify-between rounded-card border border-border bg-surface px-4 py-2.5 transition-colors duration-200 hover:bg-white/[0.03]"
+        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      >
+        <div className="flex items-center gap-1.5 text-accent">
+          <SparkleIcon width={15} height={15} />
+          <span className="font-mono text-[15px] font-semibold">{economy.aura_balance}</span>
+          <span className="text-[11px] text-muted">aura</span>
+          {auraGained > 0 && <span className="text-[11px] font-medium text-success">+{auraGained}</span>}
+        </div>
+        <span className="text-[11px] text-muted">Visit Store →</span>
+      </Link>
+
       <div className="mb-3 flex items-stretch gap-3">
         <div
-          className="flex-1 rounded-card border border-border bg-surface p-2"
+          className="relative flex-1 rounded-card border border-border bg-surface p-2"
           style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
         >
+          {economy.prestige_level >= 1 && (
+            <div
+              className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium"
+              style={{ borderColor: "rgba(90,180,255,0.3)", background: "rgba(13,13,18,0.85)", color: "#5ab4ff" }}
+            >
+              <StarIcon width={11} height={11} />
+              {economy.prestige_level}
+            </div>
+          )}
           <div style={{ aspectRatio: "300 / 290" }}>
             <Avatar
               level={avatarState.level}

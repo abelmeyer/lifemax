@@ -127,6 +127,13 @@ export async function syncAvatarProgress(userId) {
 
       cursor = addDaysStr(cursor, 1);
     }
+
+    // Mark everything through yesterday as settled. Without this, calling
+    // syncAvatarProgress again before today's criteria is met (e.g.
+    // visiting Habits, then Dashboard, then Workouts in the same day) would
+    // re-walk this same backfill range and re-apply its level/streak
+    // change on every call.
+    avatarState = { ...avatarState, last_evaluated_date: addDaysStr(today, -1) };
   }
 
   const todaysLog = (await fetchHabitLogsInRange(userId, today, today))[0] ?? null;

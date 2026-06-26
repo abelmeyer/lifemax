@@ -1,0 +1,76 @@
+import { useEffect, useState } from "react";
+import { getLastNDays, fetchRangeSummary, classifyDay } from "../../lib/calendar";
+import { todayStr } from "../../lib/dateUtils";
+import StatusDot from "./StatusDot";
+import MonthModal from "./MonthModal";
+
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+
+export default function WeekStrip({ userId }) {
+  const [days, setDays] = useState([]);
+  const [statuses, setStatuses] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [showMonth, setShowMonth] = useState(false);
+
+  useEffect(() => {
+    const range = getLastNDays(7);
+    setDays(range);
+    (async () => {
+      const summary = await fetchRangeSummary(userId, range[0], range[range.length - 1]);
+      const today = todayStr();
+      const map = {};
+      for (const d of range) map[d] = classifyDay(d, summary, today);
+      setStatuses(map);
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const today = todayStr();
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowMonth(true)}
+        className="mb-3 w-full rounded-card border border-border bg-surface p-5 text-left transition-colors duration-200 hover:bg-white/[0.03]"
+        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[15px] font-medium text-body">This week</h3>
+          <span className="text-[12px] text-accent">View month →</span>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-2">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-accent" />
+          </div>
+        ) : (
+          <div className="flex justify-between">
+            {days.map((d) => {
+              const dayNum = Number(d.slice(8, 10));
+              const dow = new Date(d + "T00:00:00").getDay();
+              const isToday = d === today;
+              return (
+                <div key={d} className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] uppercase text-muted">{DAY_LETTERS[dow]}</span>
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-full font-mono text-[12px]"
+                    style={{
+                      border: isToday ? "1.5px solid #5ab4ff" : "1.5px solid transparent",
+                      color: isToday ? "#5ab4ff" : "#e8eaf0",
+                    }}
+                  >
+                    {dayNum}
+                  </div>
+                  <StatusDot status={statuses[d]} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </button>
+
+      {showMonth && <MonthModal userId={userId} onClose={() => setShowMonth(false)} />}
+    </>
+  );
+}

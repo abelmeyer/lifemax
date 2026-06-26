@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import ScreenHeader from "../components/ScreenHeader";
 import Avatar from "../components/avatar/Avatar";
 import MacroBar from "../components/MacroBar";
+import WeekStrip from "../components/calendar/WeekStrip";
 import { TrophyIcon, PhotosIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { syncAvatarProgress } from "../lib/avatar";
@@ -134,6 +135,8 @@ export default function Dashboard() {
           Leveled up — now level {avatarState.level}
         </div>
       )}
+
+      <WeekStrip userId={user.id} />
 
       <div
         className="mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5"

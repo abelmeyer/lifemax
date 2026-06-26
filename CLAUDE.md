@@ -8,7 +8,7 @@ Personal fitness PWA. React + Vite + Tailwind + Supabase. Mobile-first, saves to
 - Sprint 2 complete: workouts (PPL, set logging, PR detection, cardio), account creation with invite code
 - Sprint 3 complete: habits, per-habit streaks, evolving avatar with earned gear layers
 - Sprint 4 complete: nutrition with USDA food search + macro calculation, photos with gallery and compare view
-- Sprint 5 IN PROGRESS: calendar history view on dashboard — tap any day to see full day detail. Got cut off mid-sprint. Resume and complete this.
+- Sprint 5 complete: calendar history — 7-day strip on Dashboard expands to a full month view, tap any day for workout/habits/cardio/nutrition detail, color-coded by completion.
 
 ## What to do tonight
 Work through the remaining sprints in order. After each sprint completes and is verified working, move to the next. Stop if you need user input you can't resolve from the codebase.

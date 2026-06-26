@@ -126,3 +126,28 @@ export function XIcon(props) {
     </Icon>
   );
 }
+
+export function ChevronLeftIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M15 6l-6 6 6 6" />
+    </Icon>
+  );
+}
+
+export function ChevronRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M9 6l6 6-6 6" />
+    </Icon>
+  );
+}
+
+export function CalendarIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 3v4M16 3v4" />
+    </Icon>
+  );
+}

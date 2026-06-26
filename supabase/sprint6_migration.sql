@@ -4,15 +4,16 @@
 -- user_economy: aura balance, prestige level, and the evaluation cursors
 -- that make syncEconomy() idempotent (mirrors the avatar_state pattern).
 create table if not exists user_economy (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  aura_balance int not null default 0,
-  prestige_level int not null default 0,
-  last_aura_evaluated_date date,
-  today_aura_date date,
-  today_aura_flags jsonb not null default '{}'::jsonb,
-  last_swim_aura_week date,
-  last_prestige_evaluated_week date
+  user_id uuid primary key references auth.users (id) on delete cascade
 );
+
+alter table user_economy add column if not exists aura_balance int not null default 0;
+alter table user_economy add column if not exists prestige_level int not null default 0;
+alter table user_economy add column if not exists last_aura_evaluated_date date;
+alter table user_economy add column if not exists today_aura_date date;
+alter table user_economy add column if not exists today_aura_flags jsonb not null default '{}'::jsonb;
+alter table user_economy add column if not exists last_swim_aura_week date;
+alter table user_economy add column if not exists last_prestige_evaluated_week date;
 
 alter table user_economy enable row level security;
 
@@ -26,13 +27,14 @@ create policy "Users manage their own economy"
 -- (same pattern as the exercises table).
 create table if not exists store_items (
   id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  description text,
-  category text,
-  required_prestige int not null default 0,
-  cost_aura int not null default 0,
-  sort_order int not null default 0
+  name text not null
 );
+
+alter table store_items add column if not exists description text;
+alter table store_items add column if not exists category text;
+alter table store_items add column if not exists required_prestige int not null default 0;
+alter table store_items add column if not exists cost_aura int not null default 0;
+alter table store_items add column if not exists sort_order int not null default 0;
 
 do $$ begin
   alter table store_items add constraint store_items_name_key unique (name);
@@ -48,11 +50,14 @@ create policy "Authenticated users can view store items"
 
 -- owned_items: purchase receipts, one per (user, item).
 create table if not exists owned_items (
-  id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  item_id uuid not null references store_items (id) on delete cascade,
-  purchased_at timestamptz not null default now()
+  id uuid primary key default uuid_generate_v4()
 );
+
+alter table owned_items add column if not exists user_id uuid references auth.users (id) on delete cascade;
+alter table owned_items add column if not exists item_id uuid references store_items (id) on delete cascade;
+alter table owned_items add column if not exists purchased_at timestamptz not null default now();
+alter table owned_items alter column user_id set not null;
+alter table owned_items alter column item_id set not null;
 
 do $$ begin
   alter table owned_items add constraint owned_items_user_item_key unique (user_id, item_id);

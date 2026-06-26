@@ -6,6 +6,19 @@ const DAILY_HABITS = ["pushups", "situps", "pullups"];
 const AURA = { workout: 50, habit: 20, swimWeekly: 40, streakDay: 10 };
 const MAX_BACKFILL_DAYS = 30;
 const MAX_BACKFILL_WEEKS = 8;
+export const PRESTIGE_DAYS_NEEDED = 5;
+
+// Aura earned today, derived from the same per-component flags syncEconomy
+// uses to pay out incrementally. Lets the Dashboard show a running "today"
+// total without a separate persisted counter.
+export function getTodaysAuraEarned(economy) {
+  const flags = economy.today_aura_date === todayStr() ? economy.today_aura_flags ?? {} : {};
+  let total = 0;
+  if (flags.workout) total += AURA.workout;
+  for (const h of DAILY_HABITS) if (flags[h]) total += AURA.habit;
+  if (flags.streak) total += AURA.streakDay;
+  return total;
+}
 
 export async function fetchEconomy(userId) {
   const { data, error } = await supabase.from("user_economy").select("*").eq("user_id", userId).maybeSingle();
@@ -161,20 +174,23 @@ export async function syncEconomy(userId) {
 
   while (prestigeCursor < thisWeekStart) {
     const fullDays = await countFullDaysInWeek(userId, prestigeCursor, pullupTarget, today);
-    if (fullDays >= 5) {
+    if (fullDays >= PRESTIGE_DAYS_NEEDED) {
       prestigeLevel += 1;
       prestigeGained += 1;
     }
     lastPrestigeWeek = prestigeCursor;
     prestigeCursor = addDaysStr(prestigeCursor, 7);
   }
-  if (lastPrestigeWeek !== thisWeekStart) {
-    const fullDays = await countFullDaysInWeek(userId, thisWeekStart, pullupTarget, today);
-    if (fullDays >= 5) {
-      prestigeLevel += 1;
-      prestigeGained += 1;
-      lastPrestigeWeek = thisWeekStart;
-    }
+
+  // Always compute this week's progress live — both to decide whether to
+  // award prestige now, and so the Dashboard can show an accurate
+  // progress bar even after the award already landed this week.
+  const weekFullDays = await countFullDaysInWeek(userId, thisWeekStart, pullupTarget, today);
+  const awardedThisWeek = lastPrestigeWeek === thisWeekStart;
+  if (!awardedThisWeek && weekFullDays >= PRESTIGE_DAYS_NEEDED) {
+    prestigeLevel += 1;
+    prestigeGained += 1;
+    lastPrestigeWeek = thisWeekStart;
   }
 
   const saved = await saveEconomy(userId, {
@@ -187,7 +203,12 @@ export async function syncEconomy(userId) {
     last_prestige_evaluated_week: lastPrestigeWeek,
   });
 
-  return { economy: saved, auraGained, prestigeGained };
+  return {
+    economy: saved,
+    auraGained,
+    prestigeGained,
+    weekProgress: { fullDays: Math.min(weekFullDays, PRESTIGE_DAYS_NEEDED), needed: PRESTIGE_DAYS_NEEDED },
+  };
 }
 
 export async function fetchStoreItems() {

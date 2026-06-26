@@ -4,12 +4,12 @@ import ScreenHeader from "../components/ScreenHeader";
 import Avatar from "../components/avatar/Avatar";
 import MacroBar from "../components/MacroBar";
 import WeekStrip from "../components/calendar/WeekStrip";
-import { TrophyIcon, PhotosIcon, SparkleIcon, StarIcon } from "../components/icons";
+import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { syncAvatarProgress } from "../lib/avatar";
 import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
-import { syncEconomy, fetchEquippedItems } from "../lib/economy";
+import { syncEconomy, fetchEquippedItems, getTodaysAuraEarned } from "../lib/economy";
 import { fetchMealsForDate, sumMacros, weeklyProteinAverage, NUTRITION_TARGETS } from "../lib/nutrition";
 import { fetchPhotos, getSignedUrls } from "../lib/photos";
 
@@ -20,12 +20,19 @@ export default function Dashboard() {
   const [justLeveledUp, setJustLeveledUp] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState([]);
   const [economy, setEconomy] = useState(null);
-  const [auraGained, setAuraGained] = useState(0);
+  const [weekProgress, setWeekProgress] = useState({ fullDays: 0, needed: 5 });
+  const [justGainedAura, setJustGainedAura] = useState(false);
   const [equippedCosmetics, setEquippedCosmetics] = useState([]);
   const [totals, setTotals] = useState({ protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
   const [weeklyProtein, setWeeklyProtein] = useState(0);
   const [latestPhotoUrl, setLatestPhotoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -53,9 +60,10 @@ export default function Dashboard() {
       }
 
       setEconomy(economyResult.economy);
+      setWeekProgress(economyResult.weekProgress);
       if (economyResult.auraGained > 0) {
-        setAuraGained(economyResult.auraGained);
-        setTimeout(() => setAuraGained(0), 2000);
+        setJustGainedAura(true);
+        setTimeout(() => setJustGainedAura(false), 400);
       }
 
       setTotals(sumMacros(meals));
@@ -85,22 +93,71 @@ export default function Dashboard() {
     );
   }
 
+  const todaysAura = getTodaysAuraEarned(economy);
+
   return (
     <>
-      <ScreenHeader title="Dashboard" subtitle="Your daily overview at a glance." />
+      <ScreenHeader
+        title="Dashboard"
+        subtitle="Your daily overview at a glance."
+        right={
+          <p className="font-mono text-[11px] text-muted">
+            {now.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
+            {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+          </p>
+        }
+      />
 
       <Link
         to="/store"
         className="card-shadow mb-3 flex items-center justify-between rounded-card border border-border bg-surface px-4 py-2.5 transition-colors duration-200 hover:bg-white/[0.03]"
       >
         <div className="flex items-center gap-1.5 text-accent">
-          <SparkleIcon width={15} height={15} />
-          <span className="font-mono text-[15px] font-semibold">{economy.aura_balance}</span>
+          <BoltIcon width={15} height={15} />
+          <span className={`font-mono text-[15px] font-semibold ${justGainedAura ? "pop-in" : ""}`}>
+            {economy.aura_balance}
+          </span>
           <span className="text-[11px] text-muted">aura</span>
-          {auraGained > 0 && <span className="pop-in text-[11px] font-medium text-success">+{auraGained}</span>}
         </div>
-        <span className="text-[11px] text-muted">Visit Store →</span>
+        <div className="flex items-center gap-3">
+          {todaysAura > 0 && (
+            <span className={`text-[11px] font-medium text-success ${justGainedAura ? "pop-in" : ""}`}>
+              +{todaysAura} today
+            </span>
+          )}
+          <span className="text-[11px] text-muted">Visit Store →</span>
+        </div>
       </Link>
+
+      <div
+        className="card-shadow mb-3 rounded-card border border-border bg-surface px-4 py-3.5"
+        style={{
+          borderColor: weekProgress.fullDays >= weekProgress.needed ? "rgba(52,211,153,0.25)" : undefined,
+        }}
+      >
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-[12px] text-muted">
+            Prestige {economy.prestige_level} → {economy.prestige_level + 1}
+          </span>
+          <span
+            className="font-mono text-[12px]"
+            style={{ color: weekProgress.fullDays >= weekProgress.needed ? "#34d399" : "#e8eaf0" }}
+          >
+            {weekProgress.fullDays >= weekProgress.needed
+              ? "Complete this week ✓"
+              : `${weekProgress.fullDays}/${weekProgress.needed} days this week`}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+          <div
+            className="h-full rounded-full transition-all duration-300 ease-out"
+            style={{
+              width: `${Math.min(100, (weekProgress.fullDays / weekProgress.needed) * 100)}%`,
+              background: weekProgress.fullDays >= weekProgress.needed ? "#34d399" : "#5ab4ff",
+            }}
+          />
+        </div>
+      </div>
 
       <div className="mb-3 flex items-stretch gap-3">
         <div className="card-shadow relative flex-1 rounded-card border border-border bg-surface p-3">

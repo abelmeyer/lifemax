@@ -1,6 +1,13 @@
 -- Lifemaxx Sprint 6 migration — paste into Supabase SQL Editor and run once.
 -- Prestige + Aura economy + Store.
 
+-- A store_items/owned_items pair from an earlier, incompatible attempt
+-- (tier/prestige_required/aura_cost/asset_path columns) may already exist.
+-- Drop and recreate clean — this is placeholder seed data, not real
+-- purchases, so there's nothing worth preserving.
+drop table if exists owned_items cascade;
+drop table if exists store_items cascade;
+
 -- user_economy: aura balance, prestige level, and the evaluation cursors
 -- that make syncEconomy() idempotent (mirrors the avatar_state pattern).
 create table if not exists user_economy (
@@ -25,21 +32,15 @@ create policy "Users manage their own economy"
 
 -- store_items: shared catalog, read-only for any authenticated user
 -- (same pattern as the exercises table).
-create table if not exists store_items (
+create table store_items (
   id uuid primary key default uuid_generate_v4(),
-  name text not null
+  name text not null unique,
+  description text,
+  category text,
+  required_prestige int not null default 0,
+  cost_aura int not null default 0,
+  sort_order int not null default 0
 );
-
-alter table store_items add column if not exists description text;
-alter table store_items add column if not exists category text;
-alter table store_items add column if not exists required_prestige int not null default 0;
-alter table store_items add column if not exists cost_aura int not null default 0;
-alter table store_items add column if not exists sort_order int not null default 0;
-
-do $$ begin
-  alter table store_items add constraint store_items_name_key unique (name);
-exception when duplicate_object or duplicate_table then null;
-end $$;
 
 alter table store_items enable row level security;
 
@@ -49,20 +50,13 @@ create policy "Authenticated users can view store items"
   using (auth.uid() is not null);
 
 -- owned_items: purchase receipts, one per (user, item).
-create table if not exists owned_items (
-  id uuid primary key default uuid_generate_v4()
+create table owned_items (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  item_id uuid not null references store_items (id) on delete cascade,
+  purchased_at timestamptz not null default now(),
+  unique (user_id, item_id)
 );
-
-alter table owned_items add column if not exists user_id uuid references auth.users (id) on delete cascade;
-alter table owned_items add column if not exists item_id uuid references store_items (id) on delete cascade;
-alter table owned_items add column if not exists purchased_at timestamptz not null default now();
-alter table owned_items alter column user_id set not null;
-alter table owned_items alter column item_id set not null;
-
-do $$ begin
-  alter table owned_items add constraint owned_items_user_item_key unique (user_id, item_id);
-exception when duplicate_object or duplicate_table then null;
-end $$;
 
 alter table owned_items enable row level security;
 

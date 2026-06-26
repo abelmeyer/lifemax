@@ -4,6 +4,7 @@ import EmptyState from "../components/EmptyState";
 import DaySelector from "../components/workouts/DaySelector";
 import ExerciseCard from "../components/workouts/ExerciseCard";
 import CardioLogger from "../components/workouts/CardioLogger";
+import LiftProgressChart from "../components/workouts/LiftProgressChart";
 import { HabitsIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { fetchExercises } from "../lib/workouts";
@@ -43,6 +44,7 @@ export default function Workouts() {
     <>
       <ScreenHeader title="Workouts" subtitle={`Day ${day} · ${dayInfo.label}`} />
       <DaySelector day={day} onChange={setDay} />
+      <LiftProgressChart userId={user.id} />
 
       {loading ? (
         <div className="flex justify-center py-10">

@@ -97,7 +97,7 @@ export default function ExerciseCard({ exercise, userId }) {
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-5 py-4">
+        <div className="fade-in border-t border-border px-5 py-4">
           <p className="mb-4 text-[13px] leading-relaxed text-muted">{exercise.cue}</p>
 
           {loading ? (

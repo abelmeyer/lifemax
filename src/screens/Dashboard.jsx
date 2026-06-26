@@ -161,7 +161,7 @@ export default function Dashboard() {
 
       {justLeveledUp && (
         <div
-          className="mb-4 flex items-center justify-center gap-2 rounded-card border px-4 py-3 text-[13px] font-medium"
+          className="fade-in mb-4 flex items-center justify-center gap-2 rounded-card border px-4 py-3 text-[13px] font-medium"
           style={{ borderColor: "rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)", color: "#34d399" }}
         >
           <TrophyIcon width={16} height={16} />

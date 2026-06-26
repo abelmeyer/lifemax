@@ -3,6 +3,7 @@ import ScreenHeader from "../components/ScreenHeader";
 import MacroBar from "../components/MacroBar";
 import FoodSearch from "../components/nutrition/FoodSearch";
 import MealBank from "../components/nutrition/MealBank";
+import ProteinTrendChart from "../components/nutrition/ProteinTrendChart";
 import { XIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { todayStr } from "../lib/dateUtils";
@@ -55,6 +56,8 @@ export default function Nutrition() {
         <MacroBar label="Fat" value={totals.fat_g} target={NUTRITION_TARGETS.fat} />
         <MacroBar label="Calories" value={totals.calories} unit="" target={NUTRITION_TARGETS.calories} />
       </div>
+
+      <ProteinTrendChart userId={user.id} />
 
       {meals.length > 0 && (
         <div

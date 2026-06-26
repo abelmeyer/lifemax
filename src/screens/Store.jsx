@@ -104,7 +104,7 @@ export default function Store() {
 
       {error && (
         <div
-          className="mb-4 rounded-card border px-4 py-3 text-[13px]"
+          className="fade-in mb-4 rounded-card border px-4 py-3 text-[13px]"
           style={{ borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)", color: "#f87171" }}
         >
           {error}

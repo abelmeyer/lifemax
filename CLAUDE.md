@@ -10,6 +10,8 @@ Personal fitness PWA. React + Vite + Tailwind + Supabase. Mobile-first, saves to
 - Sprint 4 complete: nutrition with USDA food search + macro calculation, photos with gallery and compare view
 - Sprint 5 complete: calendar history — 7-day strip on Dashboard expands to a full month view, tap any day for workout/habits/cardio/nutrition detail, color-coded by completion.
 - Sprint 6 complete: Aura + Prestige economy and Store. Aura accrues daily/weekly from workouts, habits, swim target, and streak days; Prestige levels up weekly off 5/7 majority-habit days and never decreases. Store (linked from Dashboard, not a tab) sells placeholder cosmetics across 4 prestige-gated tiers, purchasable with aura.
+- Sprint 7 skipped per instructions (needs user-provided image assets).
+- Sprint 8 complete: Recharts progress charts (bench/squat weight trend on Workouts, 30-day protein bars on Nutrition), fade-in motion on banners and expanding cards, global focus-visible styling, PWA manifest verified (scope added, builds sw.js/workbox cleanly), vercel.json added for SPA rewrites (no deploy run).
 
 ## What to do tonight
 Work through the remaining sprints in order. After each sprint completes and is verified working, move to the next. Stop if you need user input you can't resolve from the codebase.

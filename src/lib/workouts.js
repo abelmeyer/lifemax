@@ -65,6 +65,37 @@ export async function logSet({ userId, exerciseId, setNumber, weightLbs, reps })
   return data;
 }
 
+// Max weight logged per day, for each named exercise — feeds the Workouts
+// progress chart. Exercise names are matched exactly against the seeded
+// exercise library (e.g. "Barbell Bench Press", "Barbell Squat").
+export async function fetchLiftProgress(userId, exerciseNames) {
+  const { data: exs, error: exErr } = await supabase.from("exercises").select("id,name").in("name", exerciseNames);
+  if (exErr) throw exErr;
+  if (!exs || exs.length === 0) return [];
+
+  const ids = exs.map((e) => e.id);
+  const { data: sets, error } = await supabase
+    .from("workout_sets")
+    .select("exercise_id,date,weight_lbs")
+    .eq("user_id", userId)
+    .in("exercise_id", ids)
+    .order("date", { ascending: true });
+  if (error) throw error;
+
+  return exs.map((ex) => {
+    const byDate = {};
+    for (const s of sets ?? []) {
+      if (s.exercise_id !== ex.id) continue;
+      const prev = byDate[s.date];
+      if (!prev || s.weight_lbs > prev) byDate[s.date] = s.weight_lbs;
+    }
+    const points = Object.entries(byDate)
+      .map(([date, weight]) => ({ date, weight }))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    return { name: ex.name, points };
+  });
+}
+
 export async function fetchCardioToday(userId) {
   const { data, error } = await supabase
     .from("cardio_sessions")

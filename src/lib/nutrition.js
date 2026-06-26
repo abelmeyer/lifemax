@@ -115,6 +115,24 @@ export function sumMacros(meals) {
   );
 }
 
+// Daily protein totals for the last 30 days, zero-filled for days with no
+// meals logged — feeds the Nutrition progress chart.
+export async function fetchProteinTrend(userId) {
+  const end = todayStr();
+  const start = addDaysStr(end, -29);
+  const meals = await fetchMealsInRange(userId, start, end);
+
+  const byDate = {};
+  for (const m of meals) byDate[m.date] = (byDate[m.date] ?? 0) + (m.protein_g ?? 0);
+
+  const points = [];
+  for (let i = 0; i < 30; i++) {
+    const date = addDaysStr(start, i);
+    points.push({ date, protein: byDate[date] ?? 0 });
+  }
+  return points;
+}
+
 export async function weeklyProteinAverage(userId) {
   const end = todayStr();
   const start = addDaysStr(end, -6);

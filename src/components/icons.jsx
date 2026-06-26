@@ -63,3 +63,66 @@ export function PhotosIcon(props) {
     </Icon>
   );
 }
+
+export function ChevronIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 9l6 6 6-6" />
+    </Icon>
+  );
+}
+
+export function TrophyIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 4h8v4a4 4 0 01-8 0V4z" />
+      <path d="M8 5H5a2 2 0 002 4h1" />
+      <path d="M16 5h3a2 2 0 01-2 4h-1" />
+      <path d="M10 14v2a2 2 0 002 2 2 2 0 002-2v-2" />
+      <path d="M9 20h6" />
+    </Icon>
+  );
+}
+
+export function ActivityIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 12h4l2 7 4-14 2 7h6" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </Icon>
+  );
+}
+
+export function CameraIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" />
+      <circle cx="12" cy="13.5" r="3.5" />
+    </Icon>
+  );
+}
+
+export function CompareIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="8" height="16" rx="1.5" />
+      <rect x="13" y="4" width="8" height="16" rx="1.5" />
+    </Icon>
+  );
+}
+
+export function XIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Icon>
+  );
+}

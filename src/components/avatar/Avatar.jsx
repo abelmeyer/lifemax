@@ -7,7 +7,7 @@ import ChestArmDefinition from "./gear/ChestArmDefinition";
 import StoreCosmeticLayer from "./cosmetics/StoreCosmeticLayer";
 import { getEquippedGearIds } from "../../lib/avatarConfig";
 
-const METRICS = {
+export const METRICS = {
   cx: 110,
   shoulderY: 78,
   waistY: 150,
@@ -27,15 +27,21 @@ export default function Avatar({
   justLeveledUp = false,
   purchasedItems = [],
   equippedCosmetics = [],
+  customization = null,
 }) {
   const equipped = getEquippedGearIds(habitStreaks ?? {});
   const has = (id) => equipped.includes(id) || purchasedItems.includes(id);
   const isNew = (id) => justUnlocked.includes(id);
 
   // Aura cosmetics render as a backdrop glow behind everything; the rest
-  // sit on top of the body, same as earned gear.
+  // sit on top of the body in a fixed slot order (fetch order is arbitrary),
+  // so e.g. a belt always buckles over a tucked-in top.
+  const SLOT_Z_ORDER = { Legs: 1, Feet: 2, Bottom: 3, Top: 4, Waist: 5, Wrists: 6, Accessory: 7, Display: 8 };
   const auraCosmetics = equippedCosmetics.filter((c) => c.category === "Aura");
-  const bodyCosmetics = equippedCosmetics.filter((c) => c.category !== "Aura");
+  const bodyCosmetics = equippedCosmetics
+    .filter((c) => c.category !== "Aura")
+    .slice()
+    .sort((a, b) => (SLOT_Z_ORDER[a.category] ?? 9) - (SLOT_Z_ORDER[b.category] ?? 9));
 
   return (
     <svg viewBox="-30 0 300 290" width="100%" height="100%" role="img" aria-label="Your Lifemaxx avatar">
@@ -49,7 +55,7 @@ export default function Avatar({
         </g>
       )}
 
-      <AvatarBody level={level} metrics={METRICS} pulse={justLeveledUp} />
+      <AvatarBody level={level} metrics={METRICS} pulse={justLeveledUp} customization={customization} />
 
       {has("pushups") && (
         <g className={isNew("pushups") ? "gear-unlock" : undefined}>

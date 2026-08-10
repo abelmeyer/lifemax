@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeftIcon, SparkleIcon, StarIcon } from "../components/icons";
+import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
 import { useAuth } from "../lib/AuthContext";
 import { fetchEconomy, fetchStoreItems, fetchOwnedItems, purchaseItem, equipItem, unequipItem } from "../lib/economy";
 
@@ -207,7 +208,10 @@ export default function Store() {
                       className="card-shadow flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-4 transition-opacity duration-200"
                       style={{ opacity: locked ? 0.5 : 1 }}
                     >
-                      <div className="min-w-0">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[10px] border border-border bg-bg/60">
+                        <ItemThumb item={item} />
+                      </div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-[13px] font-medium text-body">{item.name}</p>
                           <span className="shrink-0 rounded-pill bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">

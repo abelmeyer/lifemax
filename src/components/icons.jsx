@@ -185,3 +185,11 @@ export function StoreIcon(props) {
     </Icon>
   );
 }
+
+export function PencilIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M17 3a2.8 2.8 0 014 4L7.5 20.5 3 21l.5-4.5L17 3z" />
+    </Icon>
+  );
+}

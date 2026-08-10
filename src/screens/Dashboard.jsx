@@ -4,8 +4,9 @@ import ScreenHeader from "../components/ScreenHeader";
 import Avatar from "../components/avatar/Avatar";
 import MacroBar from "../components/MacroBar";
 import WeekStrip from "../components/calendar/WeekStrip";
-import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon } from "../components/icons";
+import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon, PencilIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
+import { useCustomization } from "../lib/CustomizationContext";
 import { syncAvatarProgress } from "../lib/avatar";
 import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
@@ -15,6 +16,7 @@ import { fetchPhotos, getSignedUrls } from "../lib/photos";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { customization } = useCustomization();
   const [avatarState, setAvatarState] = useState(null);
   const [habitStreaks, setHabitStreaks] = useState({});
   const [justLeveledUp, setJustLeveledUp] = useState(false);
@@ -170,6 +172,13 @@ export default function Dashboard() {
               {economy.prestige_level}
             </div>
           )}
+          <Link
+            to="/avatar"
+            aria-label="Edit avatar"
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg/85 text-muted transition-colors duration-200 hover:text-body active:scale-95"
+          >
+            <PencilIcon width={13} height={13} />
+          </Link>
           <div style={{ aspectRatio: "300 / 290" }}>
             <Avatar
               level={avatarState.level}
@@ -177,6 +186,7 @@ export default function Dashboard() {
               justLeveledUp={justLeveledUp}
               justUnlocked={justUnlocked}
               equippedCosmetics={equippedCosmetics}
+              customization={customization}
             />
           </div>
         </div>

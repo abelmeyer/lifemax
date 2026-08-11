@@ -7,6 +7,10 @@ import ChestArmDefinition from "./gear/ChestArmDefinition";
 import StoreCosmeticLayer from "./cosmetics/StoreCosmeticLayer";
 import { getEquippedGearIds } from "../../lib/avatarConfig";
 
+// Cosmetics arrive in arbitrary fetch order; draw them in a fixed slot order
+// so e.g. a belt always buckles over a tucked-in top.
+const SLOT_Z_ORDER = { Legs: 1, Feet: 2, Bottom: 3, Top: 4, Waist: 5, Wrists: 6, Accessory: 7, Display: 8 };
+
 export const METRICS = {
   cx: 110,
   shoulderY: 78,
@@ -33,10 +37,6 @@ export default function Avatar({
   const has = (id) => equipped.includes(id) || purchasedItems.includes(id);
   const isNew = (id) => justUnlocked.includes(id);
 
-  // Aura cosmetics render as a backdrop glow behind everything; the rest
-  // sit on top of the body in a fixed slot order (fetch order is arbitrary),
-  // so e.g. a belt always buckles over a tucked-in top.
-  const SLOT_Z_ORDER = { Legs: 1, Feet: 2, Bottom: 3, Top: 4, Waist: 5, Wrists: 6, Accessory: 7, Display: 8 };
   const auraCosmetics = equippedCosmetics.filter((c) => c.category === "Aura");
   const bodyCosmetics = equippedCosmetics
     .filter((c) => c.category !== "Aura")

@@ -1,6 +1,7 @@
 import Avatar, { METRICS } from "../components/avatar/Avatar";
 import AvatarBody from "../components/avatar/AvatarBody";
 import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
+import StoreItemRow from "../components/store/StoreItemRow";
 import AvatarSetup from "./AvatarSetup";
 import Settings from "./Settings";
 import { AuthContext } from "../lib/AuthContext";
@@ -31,6 +32,15 @@ const SAMPLE_ITEMS = [
   { id: "i11", name: "Diamond Avatar Aura", category: "Aura" },
   { id: "i12", name: "Legacy Trophy Case", category: "Display" },
 ];
+
+// Descriptions as seeded in sprint6_migration.sql.
+const STORE_DESCRIPTIONS = {
+  "Gym Socks": "Comfortable crew socks.",
+  "Lifting Belt": "Leather belt for heavy pulls.",
+  "Golden Championship Belt": "A belt worthy of a champion.",
+  "Wrist Wraps": "Support for max-effort presses.",
+  "Chalk Bag": "Keep your grip locked in.",
+};
 
 const SAMPLE_STREAKS = {
   pushups: { current_streak: 5 },
@@ -222,6 +232,28 @@ export default function DevPreview() {
               SAMPLE_ITEMS[10],
             ]}
           />
+        </div>
+      </Section>
+
+      <Section title="Store rows (real StoreItemRow, all button states)">
+        <div className="flex max-w-md flex-col gap-2.5">
+          {[
+            { state: "buy, affordable", props: { canAfford: true } },
+            { state: "buy, too expensive", props: { canAfford: false } },
+            { state: "owned, not equipped", props: { owned: true, canAfford: true } },
+            { state: "owned, equipped", props: { owned: true, equipped: true, canAfford: true } },
+            { state: "locked by prestige", props: { locked: true, canAfford: true } },
+          ].map(({ state, props }, i) => (
+            <StoreItemRow
+              key={state}
+              item={{
+                ...SAMPLE_ITEMS[i + 4],
+                description: STORE_DESCRIPTIONS[SAMPLE_ITEMS[i + 4].name],
+                cost_aura: 250,
+              }}
+              {...props}
+            />
+          ))}
         </div>
       </Section>
 

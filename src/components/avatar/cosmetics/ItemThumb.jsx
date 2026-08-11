@@ -4,6 +4,7 @@ import StoreCosmeticLayer from "./StoreCosmeticLayer";
 // How to crop the full avatar coordinate space down to just the region a
 // slot's art occupies, so store rows can show a close-up thumbnail.
 const SLOT_VIEWBOX = {
+  Head: "84 26 52 46",
   Top: "40 40 140 140",
   Bottom: "62 150 96 66",
   Feet: "70 210 80 46",

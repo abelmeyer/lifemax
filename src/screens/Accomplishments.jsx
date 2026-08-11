@@ -19,6 +19,7 @@ export default function Accomplishments() {
   const { celebrate } = useAccomplishments();
   const [earnedById, setEarnedById] = useState({});
   const [tableMissing, setTableMissing] = useState(false);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,6 +52,9 @@ export default function Accomplishments() {
         }
       } catch (e) {
         console.error("Failed to load accomplishments", e);
+        // Without this the whole catalog renders as locked with nothing on
+        // screen to say why — indistinguishable from "you've earned none".
+        if (mounted) setError(e.message ?? "Couldn't load your badges — pull down to retry.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -90,7 +94,16 @@ export default function Accomplishments() {
         </div>
       )}
 
-      {!loading && !tableMissing && (
+      {error && (
+        <div
+          className="fade-in mb-4 rounded-card border px-4 py-3 text-[13px]"
+          style={{ borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)", color: "#f87171" }}
+        >
+          {error}
+        </div>
+      )}
+
+      {!loading && !tableMissing && !error && (
         <div className="card-shadow mb-5 rounded-card border border-border bg-surface p-4">
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-[12px] text-muted">Collection</span>

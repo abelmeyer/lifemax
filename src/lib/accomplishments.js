@@ -2,7 +2,8 @@ import { supabase } from "./supabase";
 import { todayStr } from "./dateUtils";
 import { getStageForLevel } from "./avatarConfig";
 import { gratitudeStreak, isComplete as gratitudeComplete } from "./gratitude";
-import { summarizeSession } from "./workoutSession";
+import { summarizeAllBouts } from "./workoutSession";
+import { fetchHabitSettings, DEFAULT_PULLUP_TARGET } from "./habits";
 
 const MISSING_TABLE_CODES = new Set(["42P01", "PGRST205", "PGRST202"]);
 
@@ -309,23 +310,46 @@ function longestRun(dateStrings) {
   return best;
 }
 
-async function safeSelect(table, columns, userId) {
-  const { data, error } = await supabase.from(table).select(columns).eq("user_id", userId);
-  if (error) {
-    if (isMissingTable(error)) return [];
-    throw error;
+// PostgREST caps a response at 1000 rows by default and gives no indication
+// it truncated, which would silently freeze every count-based badge once the
+// history got long. Page explicitly instead.
+const PAGE_SIZE = 1000;
+const MAX_ROWS = 50_000;
+
+async function safeSelectAll(table, columns, userId, orderColumn = "date") {
+  const rows = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .eq("user_id", userId)
+      .order(orderColumn, { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) {
+      if (isMissingTable(error)) return [];
+      throw error;
+    }
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
   }
-  return data ?? [];
+  return rows;
 }
 
 export async function buildStats(userId, { avatarState, economy, habitStreaks, pullupTarget } = {}) {
-  const [sets, habitLogs, gratitude, photos, owned] = await Promise.all([
-    safeSelect("workout_sets", "exercise_id,date,weight_lbs,reps,created_at", userId),
-    safeSelect("habit_logs", "date,pushups,situps,pullups", userId),
-    safeSelect("gratitude_entries", "date,items", userId),
-    safeSelect("photos", "date", userId),
-    safeSelect("owned_items", "item_id", userId),
+  const [sets, habitLogs, gratitude, photos, owned, settings] = await Promise.all([
+    safeSelectAll("workout_sets", "exercise_id,date,weight_lbs,reps,created_at", userId),
+    safeSelectAll("habit_logs", "date,pushups,situps,pullups", userId),
+    safeSelectAll("gratitude_entries", "date,items", userId),
+    safeSelectAll("photos", "date", userId),
+    safeSelectAll("owned_items", "item_id", userId, "item_id"),
+    // The caller usually has this already, but two of the three call sites
+    // don't pass it. Defaulting to 10 there awarded pullup badges to anyone
+    // whose real target is higher — and an accomplishments row can never be
+    // revoked, so the wrong award is permanent.
+    pullupTarget == null ? fetchHabitSettings(userId).catch(() => null) : null,
   ]);
+  const resolvedPullupTarget = pullupTarget ?? settings?.pullup_target ?? DEFAULT_PULLUP_TARGET;
 
   // Per-day session shape.
   const setsByDate = new Map();
@@ -339,17 +363,18 @@ export async function buildStats(userId, { avatarState, economy, habitStreaks, p
   let earliestStartHour = null;
   let latestSetHour = null;
 
+  // Per BOUT, not per calendar date: a morning session plus one forgotten
+  // set in the evening is two workouts, and scoring it as one awarded the
+  // "trained over an hour" badge for a gap spent not training.
   for (const daySets of setsByDate.values()) {
-    const session = summarizeSession(daySets, 0);
-    if (!session.hasSession) continue;
-    bestSessionVolume = Math.max(bestSessionVolume, session.totalVolume);
-    // nowMs=0 forces the frozen (last-set) end, so an in-progress session
-    // can't inflate this with wall-clock time.
-    longestSessionSeconds = Math.max(longestSessionSeconds, (session.lastSetMs - session.startMs) / 1000);
-    const startHour = new Date(session.startMs).getHours();
-    const endHour = new Date(session.lastSetMs).getHours();
-    earliestStartHour = earliestStartHour === null ? startHour : Math.min(earliestStartHour, startHour);
-    latestSetHour = latestSetHour === null ? endHour : Math.max(latestSetHour, endHour);
+    for (const bout of summarizeAllBouts(daySets)) {
+      bestSessionVolume = Math.max(bestSessionVolume, bout.totalVolume);
+      longestSessionSeconds = Math.max(longestSessionSeconds, bout.durationSeconds);
+      const startHour = new Date(bout.startMs).getHours();
+      const endHour = new Date(bout.lastSetMs).getHours();
+      earliestStartHour = earliestStartHour === null ? startHour : Math.min(earliestStartHour, startHour);
+      latestSetHour = latestSetHour === null ? endHour : Math.max(latestSetHour, endHour);
+    }
   }
 
   // A PR is a set that beat every earlier set on the same exercise.
@@ -369,8 +394,9 @@ export async function buildStats(userId, { avatarState, economy, habitStreaks, p
     }
   }
 
-  const target = pullupTarget ?? 10;
+  const target = resolvedPullupTarget;
   let bestDailyHabitsMet = 0;
+  const fullDates = [];
   const metDates = { pushups: [], situps: [], pullups: [] };
   for (const log of habitLogs) {
     let met = 0;
@@ -387,6 +413,7 @@ export async function buildStats(userId, { avatarState, economy, habitStreaks, p
       metDates.pullups.push(log.date);
     }
     bestDailyHabitsMet = Math.max(bestDailyHabitsMet, met);
+    if (met >= 2 && setsByDate.has(log.date)) fullDates.push(log.date);
   }
 
   const gratitudeCompleteDates = gratitude.filter((g) => gratitudeComplete(g.items)).map((g) => g.date);
@@ -412,7 +439,12 @@ export async function buildStats(userId, { avatarState, economy, habitStreaks, p
       pullups: Math.max(liveBest("pullups"), longestRun(metDates.pullups)),
       swims: liveBest("swims"),
     },
-    bestAvatarStreak: avatarState?.streak ?? 0,
+    // Recomputed from history, not read off avatarState.streak: the live
+    // counter resets to 0 the first missed day, and the engine's backfill
+    // walks past days silently — so a genuinely completed 7-day run could be
+    // zeroed before anything ever observed it, leaving streak_7 permanently
+    // unearnable. The live value still participates in case it is ahead.
+    bestAvatarStreak: Math.max(avatarState?.streak ?? 0, longestRun(fullDates)),
     level: avatarState?.level ?? 1,
     prestige: economy?.prestige_level ?? 0,
     ownedItems: owned.length,

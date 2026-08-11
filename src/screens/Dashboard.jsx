@@ -98,9 +98,12 @@ export default function Dashboard() {
         economy: economyResult.economy,
         habitStreaks: avatarResult.habitStreaks,
       })
-        .then((r) => {
-          if (mounted) celebrate(r.newlyEarned);
-        })
+        // Deliberately not gated on `mounted`: the row is already committed by
+        // the time this resolves, and the toast lives on a provider that
+        // outlives this screen. Dropping it here meant an unlock earned on the
+        // way out was recorded but never celebrated — and never can be, since
+        // it is no longer "newly" earned.
+        .then((r) => celebrate(r.newlyEarned))
         .catch(() => {});
     })();
     return () => {

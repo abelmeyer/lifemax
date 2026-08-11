@@ -11,15 +11,10 @@ export const RestTimerContext = createContext(undefined);
 export function RestTimerProvider({ children }) {
   const [timer, setTimer] = useState(null); // { label, totalSeconds, endsAt, pausedRemaining }
   const [now, setNow] = useState(() => Date.now());
-  const audioRef = useRef(null);
+  const beepedForRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
   const isPaused = timer?.pausedRemaining != null;
-
-  useEffect(() => {
-    if (!timer || isPaused) return;
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [timer, isPaused]);
 
   const remaining = useMemo(() => {
     if (!timer) return 0;
@@ -29,16 +24,31 @@ export function RestTimerProvider({ children }) {
 
   const finished = Boolean(timer) && remaining <= 0;
 
-  // A short beep when rest is up. Web Audio rather than an asset so there's
-  // nothing to bundle; wrapped because iOS refuses audio without a prior user
-  // gesture and we never want a sound failure to break the timer.
+  // The bar stays docked showing "Go" after the countdown ends, so `finished`
+  // has to stop the tick — `timer` is still non-null and the interval would
+  // otherwise re-render the whole app at 4 Hz until the bar is dismissed.
   useEffect(() => {
-    if (!finished || audioRef.current === timer?.endsAt) return;
-    audioRef.current = timer?.endsAt ?? null;
+    if (!timer || isPaused || finished) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [timer, isPaused, finished]);
+
+  // A short beep when rest is up. Web Audio rather than an asset so there's
+  // nothing to bundle.
+  useEffect(() => {
+    if (!finished) return;
+    const key = timer?.endsAt ?? null;
+    if (beepedForRef.current === key) return;
+    beepedForRef.current = key;
+
+    const ctx = audioCtxRef.current;
+    // No context means start() was never reached from a user gesture, so
+    // there is nothing iOS would let us play anyway.
+    if (!ctx) return;
     try {
-      const Ctx = window.AudioContext ?? window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      // Safari suspends the context when the tab is backgrounded; resuming is
+      // permitted because it was created during a gesture.
+      if (ctx.state === "suspended") ctx.resume();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.frequency.value = 880;
@@ -48,14 +58,36 @@ export function RestTimerProvider({ children }) {
       osc.connect(gain).connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.36);
-      osc.onended = () => ctx.close();
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
     } catch {
-      // Audio is a nicety — a blocked or unsupported context is not an error.
+      // Audio is a nicety — a blocked context is not an error worth surfacing.
     }
   }, [finished, timer]);
 
+  // One context for the app's lifetime, closed on unmount. Creating one per
+  // beep leaked them (browsers cap concurrent contexts), and creating one
+  // outside a user gesture is exactly what iOS refuses — start() is always
+  // called from the tap that logged the set.
+  useEffect(() => {
+    return () => {
+      audioCtxRef.current?.close();
+      audioCtxRef.current = null;
+    };
+  }, []);
+
   const start = useCallback((seconds, label) => {
-    audioRef.current = null;
+    beepedForRef.current = null;
+    if (!audioCtxRef.current) {
+      try {
+        const Ctx = window.AudioContext ?? window.webkitAudioContext;
+        if (Ctx) audioCtxRef.current = new Ctx();
+      } catch {
+        audioCtxRef.current = null;
+      }
+    }
     setNow(Date.now());
     setTimer({
       label: label ?? "Rest",

@@ -34,11 +34,22 @@ export default function WorkoutSessionCard({ sets }) {
           <h3 className="text-[15px] font-medium text-body">
             {session.inProgress ? "Workout in progress" : "Today's workout"}
           </h3>
+          {session.boutCount > 1 && (
+            <span className="rounded-pill bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+              session {session.boutCount}
+            </span>
+          )}
         </div>
         <span className="font-mono text-[20px] font-semibold" style={{ color: accent }}>
           {formatDuration(session.durationSeconds)}
         </span>
       </div>
+
+      {session.inProgress && (
+        <p className="mb-2 font-mono text-[11px] text-muted">
+          {formatDuration(session.idleSeconds)} since your last set
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-3 border-t border-border pt-3 text-[12px]">
         <div className="flex flex-col gap-0.5">

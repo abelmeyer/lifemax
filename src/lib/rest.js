@@ -25,13 +25,21 @@ const HEAVY_COMPOUNDS = [
   "Pull-Ups / Lat Pulldown",
 ];
 
-// Lowest rep number in a scheme, or null when it's a timed hold.
+// A timed hold looks like a duration all the way through ("45-60s", "30 sec"),
+// not merely a string that happens to end in "s" — "10 each side" is a rep
+// scheme, and treating it as a hold would prescribe the wrong rest.
+const TIMED_HOLD = /^\s*\d+\s*(?:-\s*\d+\s*)?(?:s|sec|secs|seconds)\s*$/i;
+
+// Top of the rep range, or null when it's a timed hold. The top rather than
+// the bottom: a set of "8-12" is a hypertrophy set you take to 12, and using
+// the bottom would classify it as a 3-minute strength rest, contradicting the
+// tiers above.
 export function parseTopReps(repScheme) {
   if (!repScheme) return null;
-  if (/s\s*$/i.test(repScheme.trim())) return null; // "45-60s" → timed
+  if (TIMED_HOLD.test(repScheme)) return null;
   const nums = repScheme.match(/\d+/g);
   if (!nums || nums.length === 0) return null;
-  return Math.min(...nums.map(Number));
+  return Math.max(...nums.map(Number));
 }
 
 export function restSecondsFor(exercise) {
@@ -58,9 +66,12 @@ export function formatClock(totalSeconds) {
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
-// "1h 12m" / "48m" / "6m" — for workout duration, where seconds are noise.
+// "1h 12m" / "48m" / "6m" / "40s" — for workout duration, where seconds are
+// noise above a minute but "0m" for a real (if short) workout is not.
 export function formatDuration(totalSeconds) {
-  const mins = Math.max(0, Math.round(totalSeconds / 60));
+  const secs = Math.max(0, Math.round(totalSeconds));
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.round(secs / 60);
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;

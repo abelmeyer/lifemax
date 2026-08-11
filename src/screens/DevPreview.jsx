@@ -310,9 +310,13 @@ export function DevDashboardPreview() {
   );
 }
 
+// The id makes each section addressable from a screenshot script, so a
+// capture can hide the ones it doesn't want with CSS. (Removing nodes from
+// the DOM instead does not survive a React re-render.)
 function Section({ title, children }) {
+  const id = "sec-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return (
-    <div className="mb-8">
+    <div className="mb-8" id={id} data-section={title}>
       <h2 className="mb-3 text-[15px] font-medium text-body">{title}</h2>
       {children}
     </div>

@@ -146,12 +146,12 @@ export function SnapbackCap({ metrics, geo }) {
   // lower front. A brim floated clear of the crown reads as a flying saucer,
   // which is precisely what any gap here looks like.
   const crownHalf = skullHalf(hr, 3) + 1;
-  const brimHalf = 23;
+  const brimHalf = 21;
   return (
     <g>
       <path
         d={`M ${hx - crownHalf} ${hy - 3}
-            C ${hx - crownHalf - 2} ${hy - 31} ${hx + crownHalf + 2} ${hy - 31} ${hx + crownHalf} ${hy - 3}
+            C ${hx - crownHalf - 2} ${hy - 33} ${hx + crownHalf + 2} ${hy - 33} ${hx + crownHalf} ${hy - 3}
             Z`}
         fill="#26314a"
         stroke="#141c2c"
@@ -159,9 +159,9 @@ export function SnapbackCap({ metrics, geo }) {
       />
       {/* six-panel seams meeting at the button — the only thing separating a
           structured crown from a soft one at this size */}
-      <path d={`M ${hx - 8} ${hy - 5} Q ${hx - 5.5} ${hy - 17} ${hx - 1.6} ${hy - 24.5}`} fill="none" stroke="#3a496a" strokeWidth="1.2" />
-      <path d={`M ${hx + 8} ${hy - 5} Q ${hx + 5.5} ${hy - 17} ${hx + 1.6} ${hy - 24.5}`} fill="none" stroke="#3a496a" strokeWidth="1.2" />
-      <circle cx={hx} cy={hy - 25} r="1.9" fill="#3a496a" stroke="#141c2c" strokeWidth="0.9" />
+      <path d={`M ${hx - 8} ${hy - 5} Q ${hx - 5.5} ${hy - 18} ${hx - 1.6} ${hy - 25.5}`} fill="none" stroke="#3a496a" strokeWidth="1.2" />
+      <path d={`M ${hx + 8} ${hy - 5} Q ${hx + 5.5} ${hy - 18} ${hx + 1.6} ${hy - 25.5}`} fill="none" stroke="#3a496a" strokeWidth="1.2" />
+      <circle cx={hx} cy={hy - 26} r="1.9" fill="#3a496a" stroke="#141c2c" strokeWidth="0.9" />
       {/* closure band: the snaps themselves fasten at the back of the head, so
           only the band and its last stud clear the brim */}
       <path
@@ -215,8 +215,9 @@ export function BoxingHeadgear({ metrics, geo }) {
     <g>
       {/* the strap passes under the jaw, below the mouth at hy+11 — any higher
           and it reads as a muzzle strapped across the face */}
-      <path d={`M ${hx - 15} ${hy + 12} Q ${hx} ${hy + 20} ${hx + 15} ${hy + 12}`} fill="none" stroke="#4a1f1c" strokeWidth="3.6" strokeLinecap="round" />
-      <rect x={hx + 4.5} y={hy + 14.2} width="3.6" height="3.4" rx="1" fill="#c9d3e0" stroke="#8b93a0" strokeWidth="0.8" />
+      <path d={`M ${hx - 15} ${hy + 11} Q ${hx} ${hy + 18} ${hx + 15} ${hy + 11}`} fill="none" stroke="#7d221d" strokeWidth="5" strokeLinecap="round" />
+      <path d={`M ${hx - 15} ${hy + 11} Q ${hx} ${hy + 18} ${hx + 15} ${hy + 11}`} fill="none" stroke="#a8362e" strokeWidth="3.2" strokeLinecap="round" />
+      <rect x={hx + 4.5} y={hy + 12.4} width="3.6" height="3.4" rx="1" fill="#c9d3e0" stroke="#8b93a0" strokeWidth="0.8" />
       <path d={shell} fill="#b23a32" stroke="#7d221d" strokeWidth="1.5" />
       {/* the brow bar is the thickest pad on a real guard, so it carries the
           highlight that tells this apart from a plain hood */}
@@ -227,6 +228,8 @@ export function BoxingHeadgear({ metrics, geo }) {
         stroke="#7d221d"
         strokeWidth="1.1"
       />
+      {/* every interior line stays inside the shell outline — the crown peaks
+          at hy-23, so a highlight drawn any higher hangs off the helmet */}
       {[-1, 1].map((s) => (
         <g key={s}>
           <path
@@ -237,22 +240,38 @@ export function BoxingHeadgear({ metrics, geo }) {
             strokeOpacity="0.85"
           />
           <path
-            d={`M ${hx + s * 20.5} ${hy - 10} Q ${hx + s * 19} ${hy - 19} ${hx + s * 11} ${hy - 23.5}`}
+            d={`M ${hx + s * 19.5} ${hy + 1} Q ${hx + s * 18.5} ${hy + 7} ${hx + s * 15} ${hy + 13}`}
             fill="none"
             stroke="#d4574a"
-            strokeWidth="1.4"
-            strokeOpacity="0.7"
+            strokeWidth="1.5"
+            strokeOpacity="0.6"
             strokeLinecap="round"
           />
         </g>
       ))}
+      <ellipse cx={hx - 17.4} cy={hy + 1} rx="2.4" ry="3" fill="#7d221d" />
+      <ellipse cx={hx + 17.4} cy={hy + 1} rx="2.4" ry="3" fill="#7d221d" />
       <path
-        d={`M ${hx - 5} ${hy - 24.5} Q ${hx} ${hy - 26.5} ${hx + 5} ${hy - 24.5}`}
+        d={`M ${hx - 14} ${hy - 15} Q ${hx} ${hy - 20.5} ${hx + 14} ${hy - 15}`}
         fill="none"
         stroke="#f0d9c4"
-        strokeWidth="1.6"
-        strokeOpacity="0.6"
+        strokeWidth="1.8"
+        strokeOpacity="0.45"
         strokeLinecap="round"
+      />
+      {/* the face hole is a tunnel through 3cm of foam, so its edge is in
+          shadow — without this the shell flattens into a red horseshoe */}
+      <path
+        d={`M ${hx - 11.2} ${hy + 12}
+            C ${hx - 13.5} ${hy + 5} ${hx - 14} ${hy - 2} ${hx - 14} ${hy - 7}
+            C ${hx - 14} ${hy - 10.5} ${hx - 8.5} ${hy - 12.8} ${hx} ${hy - 12.8}
+            C ${hx + 8.5} ${hy - 12.8} ${hx + 14} ${hy - 10.5} ${hx + 14} ${hy - 7}
+            C ${hx + 14} ${hy - 2} ${hx + 13.5} ${hy + 5} ${hx + 11.2} ${hy + 12}`}
+        fill="none"
+        stroke="#7d221d"
+        strokeWidth="2.2"
+        strokeOpacity="0.9"
+        strokeLinejoin="round"
       />
     </g>
   );

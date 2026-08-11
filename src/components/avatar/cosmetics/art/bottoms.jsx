@@ -45,7 +45,7 @@ export function MeshShorts({ metrics, geo }) {
   const hemHalf = half + 4;
   const notchTip = bottom - 18;
   const halfAt = (y) => half + ((hemHalf - half) * (y - top)) / (bottom - top);
-  const notchAt = (y) => (y < notchTip ? 0 : (4 * (y - notchTip)) / (bottom - notchTip));
+  const notchAt = (y) => (y < notchTip ? 0 : (5 * (y - notchTip)) / (bottom - notchTip));
 
   // Perforations are emitted as explicit circles rather than an SVG <pattern>:
   // several of these render in one document (store list plus on-body) and

@@ -24,8 +24,8 @@ export function Sweatbands({ metrics, geo }) {
   const g = geoOr(geo, metrics);
   // Terry is bulky, so the band clears the arm by 3px a side; the arm rect
   // itself widens 18→22 and slides outward as the shoulders grow.
-  const top = g.armBottomY - 16;
-  const h = 12;
+  const top = g.armBottomY - 16.5;
+  const h = 13;
   const w = g.armWidth + 6;
   const mid = top + h / 2;
   return (
@@ -47,6 +47,8 @@ export function Sweatbands({ metrics, geo }) {
 
 export function LiftingStraps({ metrics, geo }) {
   const g = geoOr(geo, metrics);
+  // Webbing wraps the wrist, so the cuff runs 2px proud of the arm rect on
+  // each side rather than sitting flush inside it.
   const top = g.armBottomY - 18;
   const h = 15;
   const w = g.armWidth + 4;
@@ -103,7 +105,7 @@ export function FitnessWatch({ metrics, geo }) {
   // not mirror onto g.armRightX like every other Wrists item.
   const x = g.armLeftX - 1;
   const w = g.armWidth + 2;
-  const cx = x + w / 2;
+  const armMid = x + w / 2;
   const bandTop = g.armBottomY - 30;
   const bandH = 28;
   const caseW = w + 1;
@@ -116,17 +118,17 @@ export function FitnessWatch({ metrics, geo }) {
       <rect x={x + 1} y={bandTop} width={w - 2} height={bandH} rx="3" fill="#1e212a" stroke="#0f1117" strokeWidth="1.2" />
       <line x1={x + 2.5} y1={bandTop + 3} x2={x + w - 2.5} y2={bandTop + 3} stroke="#39404f" strokeWidth="1" />
       <line x1={x + 2.5} y1={bandTop + bandH - 3} x2={x + w - 2.5} y2={bandTop + bandH - 3} stroke="#39404f" strokeWidth="1" />
-      <rect x={cx - caseW / 2} y={caseY} width={caseW} height={caseH} rx="4.5" fill="#333947" stroke="#a5aec0" strokeWidth="1.4" />
-      <rect x={cx - caseW / 2 - 2.2} y={caseY + caseH / 2 - 2.4} width="2.6" height="4.8" rx="1.2" fill="#a5aec0" />
-      <rect x={cx - caseW / 2 + 2.5} y={screenY} width={caseW - 5} height={screenH} rx="2.5" fill="#08131f" />
-      <rect x={cx - caseW / 2 + 2.5} y={screenY} width={caseW - 5} height={screenH} rx="2.5" fill="#5ab4ff" opacity="0.16" />
+      <rect x={armMid - caseW / 2} y={caseY} width={caseW} height={caseH} rx="4.5" fill="#333947" stroke="#a5aec0" strokeWidth="1.4" />
+      <rect x={armMid - caseW / 2 - 2.2} y={caseY + caseH / 2 - 2.4} width="2.6" height="4.8" rx="1.2" fill="#a5aec0" />
+      <rect x={armMid - caseW / 2 + 2.5} y={screenY} width={caseW - 5} height={screenH} rx="2.5" fill="#08131f" />
+      <rect x={armMid - caseW / 2 + 2.5} y={screenY} width={caseW - 5} height={screenH} rx="2.5" fill="#5ab4ff" opacity="0.16" />
       <path
-        d={`M ${cx - caseW / 2 + 4} ${screenY + screenH * 0.55}
-            L ${cx - 2.5} ${screenY + screenH * 0.55}
-            L ${cx - 0.5} ${screenY + screenH * 0.2}
-            L ${cx + 1.5} ${screenY + screenH * 0.82}
-            L ${cx + 3} ${screenY + screenH * 0.55}
-            L ${cx + caseW / 2 - 4} ${screenY + screenH * 0.55}`}
+        d={`M ${armMid - caseW / 2 + 4} ${screenY + screenH * 0.55}
+            L ${armMid - 2.5} ${screenY + screenH * 0.55}
+            L ${armMid - 0.5} ${screenY + screenH * 0.2}
+            L ${armMid + 1.5} ${screenY + screenH * 0.82}
+            L ${armMid + 3} ${screenY + screenH * 0.55}
+            L ${armMid + caseW / 2 - 4} ${screenY + screenH * 0.55}`}
         fill="none"
         stroke="#5ab4ff"
         strokeWidth="1.3"

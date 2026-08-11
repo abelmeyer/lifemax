@@ -60,7 +60,11 @@ export function MedalRack({ metrics }) {
           </g>
         );
       })}
-      <ellipse cx={x} cy="88" rx="18" ry="3" fill="#5ab4ff" opacity="0.1" />
+      <g fill="#b9bec8" fillOpacity="0.55">
+        <circle cx={x - 13} cy={railY} r="1.3" />
+        <circle cx={x} cy={railY} r="1.3" />
+        <circle cx={x + 13} cy={railY} r="1.3" />
+      </g>
     </g>
   );
 }
@@ -82,7 +86,7 @@ export function PRBoard({ metrics }) {
     <g>
       <rect x={bx} y={by} width={bw} height={bh} rx="3" fill="#5c4126" stroke="#3e2b1c" strokeWidth="1.4" />
       <rect x={bx + 3.5} y={by + 3.5} width={bw - 7} height={bh - 15} rx="1.5" fill="#1a2620" stroke="#0f1a16" strokeWidth="1" />
-      <text x={x} y={by + 14} textAnchor="middle" fontSize="7.5" fontWeight="600" letterSpacing="0.6" fill="#eaf3ed" fillOpacity="0.92">
+      <text x={x} y={by + 13} textAnchor="middle" fontSize="6.4" fontWeight="600" letterSpacing="0.5" fill="#eaf3ed" fillOpacity="0.92">
         PR BOARD
       </text>
       <line x1={bx + 8} y1={by + 17.5} x2={bx + bw - 8} y2={by + 17.5} stroke="#eaf3ed" strokeOpacity="0.4" strokeWidth="1" />
@@ -129,8 +133,17 @@ export function HallOfFamePlaque({ metrics }) {
     <g>
       <path d={shell(0)} fill="#8a5f2b" stroke="#e3bd54" strokeWidth="1.6" />
       <path d={shell(4)} fill="#6b4620" stroke="#c69a2e" strokeWidth="1" />
-      {/* laurel + star, the crest that makes it read as cast rather than printed */}
-      <path d={`M ${x - 8} ${y0 + 20} q 3 -9 8 -11 q 5 2 8 11`} fill="none" stroke="#e3bd54" strokeWidth="1.2" strokeLinecap="round" />
+      {/* laurel flanking the star — the crest that reads cast, not printed */}
+      <g fill="none" stroke="#e3bd54" strokeWidth="1.2" strokeLinecap="round">
+        <path d={`M ${x - 9} ${y0 + 8} q -5 7 -1 15`} />
+        <path d={`M ${x + 9} ${y0 + 8} q 5 7 1 15`} />
+      </g>
+      <g fill="#e3bd54" fillOpacity="0.85">
+        <ellipse cx={x - 12.5} cy={y0 + 12} rx="2.4" ry="1.3" transform={`rotate(-40 ${x - 12.5} ${y0 + 12})`} />
+        <ellipse cx={x - 12.5} cy={y0 + 18} rx="2.4" ry="1.3" transform={`rotate(-15 ${x - 12.5} ${y0 + 18})`} />
+        <ellipse cx={x + 12.5} cy={y0 + 12} rx="2.4" ry="1.3" transform={`rotate(40 ${x + 12.5} ${y0 + 12})`} />
+        <ellipse cx={x + 12.5} cy={y0 + 18} rx="2.4" ry="1.3" transform={`rotate(15 ${x + 12.5} ${y0 + 18})`} />
+      </g>
       <path
         d={`M ${x} ${y0 + 8} L ${x + 2.1} ${y0 + 13.4} L ${x + 7.6} ${y0 + 13.8} L ${x + 3.4} ${y0 + 17.4}
             L ${x + 4.7} ${y0 + 22.8} L ${x} ${y0 + 19.8} L ${x - 4.7} ${y0 + 22.8} L ${x - 3.4} ${y0 + 17.4}

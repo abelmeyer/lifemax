@@ -29,62 +29,71 @@ export function ChalkBag({ metrics }) {
 
 export function GymTowel({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const { cx, shoulderY, hipY } = metrics;
+  const { cx, shoulderY, waistY } = metrics;
   // Slung over the near shoulder, so the drape has to start where the shoulder
   // actually ends — that edge slides 30 → 45px out across the six stages.
   const capOut = cx + g.shoulderHalf + 4;
-  const capIn = cx + 12;
+  const capIn = cx + g.shoulderHalf - 23;
   const capMid = (capIn + capOut) / 2;
-  const fold = shoulderY + 8;
+  const fold = shoulderY + 5;
   // Constant-width tail hung off the outer edge rather than off cx, so a
   // narrow stage-1 shoulder gets the same towel as a wide stage-6 one.
-  const tailR = cx + g.shoulderHalf + 1;
-  const tailL = tailR - 23;
+  const tailR = cx + g.shoulderHalf;
+  const tailL = tailR - 22;
   const tailMid = (tailL + tailR) / 2;
-  const hemY = hipY - 8;
+  const hemY = waistY - 2;
+  const band = (y, w) => (
+    <>
+      <line x1={tailL + 2} y1={y} x2={tailR - 2} y2={y} stroke="#5d6b80" strokeWidth={w} />
+      <line x1={tailL + 2.5} y1={y + 4.5} x2={tailR - 2.5} y2={y + 4.5} stroke="#7d8a9c" strokeWidth={w * 0.6} />
+    </>
+  );
   return (
     <g>
       {/* the half that fell behind the shoulder */}
       <path
-        d={`M ${capOut - 10} ${fold - 3}
-            L ${capOut + 2} ${fold - 5}
-            L ${capOut + 3} ${fold + 19}
-            Q ${capOut - 4} ${fold + 23} ${capOut - 10} ${fold + 17}
+        d={`M ${capOut - 9} ${fold}
+            L ${capOut + 2} ${fold - 2}
+            L ${capOut + 3} ${fold + 21}
+            Q ${capOut - 3} ${fold + 25} ${capOut - 9} ${fold + 19}
             Z`}
         fill="#a7aeb8"
         stroke="#848c98"
         strokeWidth="1.2"
       />
-      {/* front tail */}
+      {/* front tail, widening slightly as it falls */}
       <path
-        d={`M ${tailL} ${fold - 4}
-            L ${tailR} ${fold - 4}
-            L ${tailR - 1.5} ${hemY}
-            Q ${tailMid} ${hemY + 6} ${tailL + 1.5} ${hemY - 3}
+        d={`M ${tailL + 1.5} ${fold}
+            L ${tailR - 0.5} ${fold}
+            L ${tailR} ${hemY}
+            Q ${tailMid} ${hemY + 6} ${tailL} ${hemY - 3}
             Z`}
         fill="#c8cdd6"
         stroke="#9aa1ad"
         strokeWidth="1.3"
       />
-      <g stroke="#b0b7c1" strokeWidth="1" strokeOpacity="0.75">
-        <line x1={tailL + 3} y1={hemY - 34} x2={tailR - 3} y2={hemY - 34} />
-        <line x1={tailL + 3} y1={hemY - 27} x2={tailR - 3} y2={hemY - 27} />
+      {/* woven bands at both ends — the detail that survives thumbnail scale */}
+      {band(fold + 10, 3.4)}
+      {band(hemY - 17, 3.4)}
+      {/* terry texture — reads as cloth rather than card at thumbnail size */}
+      <g stroke="#aeb6c1" strokeWidth="0.9" strokeOpacity="0.75">
+        <line x1={tailL + 4} y1={hemY - 32} x2={tailMid + 1} y2={hemY - 32} />
+        <line x1={tailMid - 1} y1={hemY - 27} x2={tailR - 4} y2={hemY - 27} />
+        <line x1={tailL + 4} y1={hemY - 22} x2={tailMid + 2} y2={hemY - 22} />
+        <line x1={tailMid - 4} y1={fold + 20} x2={tailMid - 4.5} y2={hemY - 6} strokeOpacity="0.4" />
       </g>
-      {/* woven hem stripes — the detail that still reads at thumbnail size */}
-      <line x1={tailL + 2} y1={hemY - 13} x2={tailR - 2} y2={hemY - 13} stroke="#6f7d8c" strokeWidth="2.6" />
-      <line x1={tailL + 2} y1={hemY - 7.5} x2={tailR - 2.5} y2={hemY - 7.5} stroke="#6f7d8c" strokeWidth="1.4" />
       {/* the fold lying across the shoulder, drawn last so it caps both tails */}
       <path
         d={`M ${capIn} ${shoulderY - 7}
-            Q ${capMid} ${shoulderY - 11} ${capOut} ${shoulderY - 1}
-            L ${capOut} ${fold + 5}
-            Q ${capMid} ${fold - 3} ${capIn} ${fold + 1}
+            Q ${capMid} ${shoulderY - 11} ${capOut} ${shoulderY - 2}
+            L ${capOut} ${fold + 8}
+            Q ${capMid} ${fold + 1} ${capIn} ${fold + 4}
             Z`}
         fill="#d5dae1"
         stroke="#9aa1ad"
         strokeWidth="1.3"
       />
-      <path d={`M ${capIn + 2} ${shoulderY - 2} Q ${capMid} ${shoulderY - 5} ${capOut - 2} ${shoulderY + 3}`} fill="none" stroke="#aeb5bf" strokeWidth="1" />
+      <path d={`M ${capIn + 2} ${shoulderY - 2.5} Q ${capMid} ${shoulderY - 6} ${capOut - 2} ${shoulderY + 2}`} fill="none" stroke="#aeb5bf" strokeWidth="1" />
     </g>
   );
 }
@@ -172,13 +181,13 @@ export function WeightedVest({ metrics, geo }) {
       />
       {/* shoulder yokes — heavy webbing, thick enough to read as load-bearing */}
       <path
-        d={`M ${cx - shoulderOut} ${topY} L ${cx - neckIn} ${shoulderY - 6} L ${cx - neckIn + 4} ${shoulderY + 4} L ${cx - shoulderOut + 3} ${topY + 11} Z`}
+        d={`M ${cx - shoulderOut} ${topY - 0.5} L ${cx - neckIn} ${shoulderY - 6.5} L ${cx - neckIn + 5} ${shoulderY + 5} L ${cx - shoulderOut + 2} ${topY + 13} Z`}
         fill="#525a6a"
         stroke="#6d7688"
         strokeWidth="1.1"
       />
       <path
-        d={`M ${cx + shoulderOut} ${topY} L ${cx + neckIn} ${shoulderY - 6} L ${cx + neckIn - 4} ${shoulderY + 4} L ${cx + shoulderOut - 3} ${topY + 11} Z`}
+        d={`M ${cx + shoulderOut} ${topY - 0.5} L ${cx + neckIn} ${shoulderY - 6.5} L ${cx + neckIn - 5} ${shoulderY + 5} L ${cx + shoulderOut - 2} ${topY + 13} Z`}
         fill="#525a6a"
         stroke="#6d7688"
         strokeWidth="1.1"
@@ -211,9 +220,9 @@ export function ChampionshipMedal({ metrics }) {
   const { cx, shoulderY } = metrics;
   // Hangs off the neck, and neck width and head radius are fixed across the
   // stages — this one rides the centerline, not the torso edges.
-  const neckY = shoulderY - 12;
-  const ringY = shoulderY + 30;
-  const my = ringY + 13;
+  const neckY = shoulderY - 2;
+  const ringY = shoulderY + 21;
+  const my = ringY + 9;
   const star = (r) =>
     `M ${cx} ${my - r} L ${cx + r * 0.31} ${my - r * 0.31} L ${cx + r} ${my - r * 0.22}
      L ${cx + r * 0.5} ${my + r * 0.29} L ${cx + r * 0.62} ${my + r * 0.98}
@@ -222,24 +231,24 @@ export function ChampionshipMedal({ metrics }) {
   return (
     <g>
       <path
-        d={`M ${cx - 11} ${neckY} L ${cx - 4.5} ${neckY + 1} L ${cx - 1.5} ${ringY - 1} L ${cx - 6.5} ${ringY - 1} Z`}
+        d={`M ${cx - 13} ${neckY - 1} L ${cx - 6} ${neckY + 1} L ${cx - 1.5} ${ringY - 1} L ${cx - 6.5} ${ringY - 1} Z`}
         fill="#a92b3f"
         stroke="#75182a"
         strokeWidth="1.1"
       />
       <path
-        d={`M ${cx + 11} ${neckY} L ${cx + 4.5} ${neckY + 1} L ${cx + 1.5} ${ringY - 1} L ${cx + 6.5} ${ringY - 1} Z`}
+        d={`M ${cx + 13} ${neckY - 1} L ${cx + 6} ${neckY + 1} L ${cx + 1.5} ${ringY - 1} L ${cx + 6.5} ${ringY - 1} Z`}
         fill="#c33449"
         stroke="#75182a"
         strokeWidth="1.1"
       />
-      <path d={`M ${cx - 8} ${neckY + 3} L ${cx - 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
-      <path d={`M ${cx + 8} ${neckY + 3} L ${cx + 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
-      <circle cx={cx} cy={ringY + 1} r="3.2" fill="none" stroke="#e3bd54" strokeWidth="1.6" />
-      <circle cx={cx} cy={my} r="11" fill="#c69a2e" stroke="#8f6c1c" strokeWidth="1.3" />
-      <circle cx={cx} cy={my} r="8.4" fill="#e3bd54" stroke="#c69a2e" strokeWidth="0.9" />
-      <path d={star(5.4)} fill="#fdf3d0" stroke="#c69a2e" strokeWidth="0.6" />
-      <path d={`M ${cx - 8.6} ${my - 4} A 9.6 9.6 0 0 1 ${cx - 2} ${my - 10.4}`} fill="none" stroke="#fff3c9" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round" />
+      <path d={`M ${cx - 9.5} ${neckY + 2} L ${cx - 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
+      <path d={`M ${cx + 9.5} ${neckY + 2} L ${cx + 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
+      <circle cx={cx} cy={ringY + 1} r="2.9" fill="none" stroke="#e3bd54" strokeWidth="1.6" />
+      <circle cx={cx} cy={my} r="9.5" fill="#c69a2e" stroke="#8f6c1c" strokeWidth="1.3" />
+      <circle cx={cx} cy={my} r="7.2" fill="#e3bd54" stroke="#c69a2e" strokeWidth="0.9" />
+      <path d={star(4.7)} fill="#fdf3d0" stroke="#c69a2e" strokeWidth="0.6" />
+      <path d={`M ${cx - 7.4} ${my - 3.4} A 8.3 8.3 0 0 1 ${cx - 1.7} ${my - 9}`} fill="none" stroke="#fff3c9" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round" />
     </g>
   );
 }

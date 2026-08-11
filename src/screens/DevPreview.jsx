@@ -475,9 +475,11 @@ export default function DevPreview() {
         <p className="mb-2 text-[12px] leading-relaxed text-muted">
           The shoulders span 60→90 and the waist 70→44 across the six stages, so any cosmetic drawn at fixed pixel
           offsets detaches from the body here. Every garment must still sit on the limb it covers in BOTH columns.
+          Accessories are included because some of them (the weighted vest, the medal) are worn on the body and need
+          the same check — only Aura and Display, which never touch it, are left out.
         </p>
         <div className="flex flex-wrap gap-2">
-          {SAMPLE_ITEMS.filter((i) => !["Aura", "Display", "Accessory"].includes(i.category)).flatMap((item) =>
+          {SAMPLE_ITEMS.filter((i) => !["Aura", "Display"].includes(i.category)).flatMap((item) =>
             [1, 32].map((lvl) => (
               <Cell key={`${item.id}-${lvl}`} label={`${item.name} · L${lvl}`} width={124}>
                 <div style={{ width: 112, aspectRatio: "300 / 290" }}>

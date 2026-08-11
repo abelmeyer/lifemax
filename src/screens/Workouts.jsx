@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ScreenHeader from "../components/ScreenHeader";
 import EmptyState from "../components/EmptyState";
 import DaySelector from "../components/workouts/DaySelector";
 import ExerciseCard from "../components/workouts/ExerciseCard";
 import CardioLogger from "../components/workouts/CardioLogger";
 import LiftProgressChart from "../components/workouts/LiftProgressChart";
+import WorkoutSessionCard from "../components/workouts/WorkoutSessionCard";
 import { HabitsIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
-import { fetchExercises } from "../lib/workouts";
+import { useAccomplishments } from "../lib/AccomplishmentsContext";
+import { fetchExercises, fetchSetsForDate } from "../lib/workouts";
+import { syncAccomplishments } from "../lib/accomplishments";
+import { todayStr } from "../lib/dateUtils";
 import { PPL_DAYS, CATEGORY_TO_SLOT } from "../lib/ppl";
 
 const DAY_STORAGE_KEY = "lifemaxx_workout_day";
@@ -18,7 +22,9 @@ export default function Workouts() {
     const saved = Number(localStorage.getItem(DAY_STORAGE_KEY));
     return saved >= 1 && saved <= 7 ? saved : 1;
   });
+  const { celebrate } = useAccomplishments();
   const [exercises, setExercises] = useState([]);
+  const [todaysSets, setTodaysSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,6 +34,26 @@ export default function Workouts() {
       .catch(() => setError("Couldn't load exercises"))
       .finally(() => setLoading(false));
   }, []);
+
+  const refreshSession = useCallback(() => {
+    fetchSetsForDate(user.id, todayStr())
+      .then(setTodaysSets)
+      .catch(() => {});
+  }, [user.id]);
+
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
+
+  // Logging a set is where "First Blood" and the volume/timing badges become
+  // true, so the check runs here rather than waiting for the next Dashboard
+  // visit.
+  const handleSetsChanged = useCallback(() => {
+    refreshSession();
+    syncAccomplishments(user.id)
+      .then((r) => celebrate(r.newlyEarned))
+      .catch(() => {});
+  }, [refreshSession, user.id, celebrate]);
 
   useEffect(() => {
     localStorage.setItem(DAY_STORAGE_KEY, String(day));
@@ -44,6 +70,7 @@ export default function Workouts() {
     <>
       <ScreenHeader title="Workouts" subtitle={`Day ${day} · ${dayInfo.label}`} />
       <DaySelector day={day} onChange={setDay} />
+      <WorkoutSessionCard sets={todaysSets} />
       <LiftProgressChart userId={user.id} />
 
       {loading ? (
@@ -62,7 +89,7 @@ export default function Workouts() {
         </div>
       ) : (
         dayExercises.map((ex) => (
-          <ExerciseCard key={ex.id} exercise={ex} userId={user.id} />
+          <ExerciseCard key={ex.id} exercise={ex} userId={user.id} onSetsChanged={handleSetsChanged} />
         ))
       )}
 

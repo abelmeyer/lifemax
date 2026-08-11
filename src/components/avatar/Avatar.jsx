@@ -5,9 +5,13 @@ import SixPack from "./gear/SixPack";
 import SwimCap from "./gear/SwimCap";
 import ChestArmDefinition from "./gear/ChestArmDefinition";
 import StoreCosmeticLayer from "./cosmetics/StoreCosmeticLayer";
-import { getEquippedGearIds } from "../../lib/avatarConfig";
+import { getEquippedGearIds, getStageGeometry } from "../../lib/avatarConfig";
 
-const METRICS = {
+// Cosmetics arrive in arbitrary fetch order; draw them in a fixed slot order
+// so e.g. a belt always buckles over a tucked-in top.
+const SLOT_Z_ORDER = { Legs: 1, Feet: 2, Bottom: 3, Top: 4, Waist: 5, Wrists: 6, Accessory: 7, Display: 8 };
+
+export const METRICS = {
   cx: 110,
   shoulderY: 78,
   waistY: 150,
@@ -27,20 +31,27 @@ export default function Avatar({
   justLeveledUp = false,
   purchasedItems = [],
   equippedCosmetics = [],
+  customization = null,
 }) {
   const equipped = getEquippedGearIds(habitStreaks ?? {});
   const has = (id) => equipped.includes(id) || purchasedItems.includes(id);
   const isNew = (id) => justUnlocked.includes(id);
 
-  // Aura cosmetics render as a backdrop glow behind everything; the rest
-  // sit on top of the body, same as earned gear.
   const auraCosmetics = equippedCosmetics.filter((c) => c.category === "Aura");
-  const bodyCosmetics = equippedCosmetics.filter((c) => c.category !== "Aura");
+  const bodyCosmetics = equippedCosmetics
+    .filter((c) => c.category !== "Aura")
+    .slice()
+    .sort((a, b) => (SLOT_Z_ORDER[a.category] ?? 9) - (SLOT_Z_ORDER[b.category] ?? 9));
+
+  // Resolved body geometry at this level, so every cosmetic sits on the
+  // silhouette it's actually being drawn over rather than a fixed guess.
+  const geo = getStageGeometry(level, METRICS);
+  const hasBottomCosmetic = bodyCosmetics.some((c) => c.category === "Bottom");
 
   return (
     <svg viewBox="-30 0 300 290" width="100%" height="100%" role="img" aria-label="Your Lifemaxx avatar">
       {auraCosmetics.map((item) => (
-        <StoreCosmeticLayer key={item.id} item={item} metrics={METRICS} />
+        <StoreCosmeticLayer key={item.id} item={item} metrics={METRICS} geo={geo} />
       ))}
 
       {has("pullups") && (
@@ -49,7 +60,13 @@ export default function Avatar({
         </g>
       )}
 
-      <AvatarBody level={level} metrics={METRICS} pulse={justLeveledUp} />
+      <AvatarBody
+        level={level}
+        metrics={METRICS}
+        pulse={justLeveledUp}
+        customization={customization}
+        hideDefaultBottom={hasBottomCosmetic}
+      />
 
       {has("pushups") && (
         <g className={isNew("pushups") ? "gear-unlock" : undefined}>
@@ -75,7 +92,7 @@ export default function Avatar({
       )}
 
       {bodyCosmetics.map((item) => (
-        <StoreCosmeticLayer key={item.id} item={item} metrics={METRICS} />
+        <StoreCosmeticLayer key={item.id} item={item} metrics={METRICS} geo={geo} />
       ))}
     </svg>
   );

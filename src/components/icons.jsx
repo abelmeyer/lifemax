@@ -185,3 +185,30 @@ export function StoreIcon(props) {
     </Icon>
   );
 }
+
+export function PencilIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M17 3a2.8 2.8 0 014 4L7.5 20.5 3 21l.5-4.5L17 3z" />
+    </Icon>
+  );
+}
+
+export function SettingsIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5v.2a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H2.8a2 2 0 110-4h.1A1.7 1.7 0 004.5 9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V2.8a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1h.2a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
+    </Icon>
+  );
+}
+
+export function LogoutIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+      <path d="M16 17l5-5-5-5" />
+      <path d="M21 12H9" />
+    </Icon>
+  );
+}

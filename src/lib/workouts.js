@@ -37,6 +37,13 @@ export function summarizeHistory(sets, today) {
     : [];
 
   const bestWeight = sets.reduce((max, s) => Math.max(max, s.weight_lbs ?? 0), 0);
+  // Best before today, kept separately so editing or deleting one of today's
+  // sets can recompute bestWeight downward — a mistyped PR must be
+  // correctable, which a running max() alone can never do.
+  const pastBestWeight = sets.reduce(
+    (max, s) => (s.date === today ? max : Math.max(max, s.weight_lbs ?? 0)),
+    0,
+  );
 
   const lastBest = lastSets.reduce((best, s) => {
     if (!best) return s;
@@ -45,7 +52,7 @@ export function summarizeHistory(sets, today) {
     return best;
   }, null);
 
-  return { todaysSets, lastSets, lastDate, lastBest, bestWeight };
+  return { todaysSets, lastSets, lastDate, lastBest, bestWeight, pastBestWeight };
 }
 
 export async function logSet({ userId, exerciseId, setNumber, weightLbs, reps }) {
@@ -63,6 +70,35 @@ export async function logSet({ userId, exerciseId, setNumber, weightLbs, reps })
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function updateSet(setId, { weightLbs, reps }) {
+  const { data, error } = await supabase
+    .from("workout_sets")
+    .update({ weight_lbs: weightLbs, reps })
+    .eq("id", setId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteSet(setId) {
+  const { error } = await supabase.from("workout_sets").delete().eq("id", setId);
+  if (error) throw error;
+}
+
+// Every set logged on a date, across all exercises — the raw material for the
+// session timing card (created_at bounds the workout).
+export async function fetchSetsForDate(userId, date) {
+  const { data, error } = await supabase
+    .from("workout_sets")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
 }
 
 // Max weight logged per day, for each named exercise — feeds the Workouts

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeftIcon, SparkleIcon, StarIcon } from "../components/icons";
+import StoreItemRow from "../components/store/StoreItemRow";
 import { useAuth } from "../lib/AuthContext";
 import { fetchEconomy, fetchStoreItems, fetchOwnedItems, purchaseItem, equipItem, unequipItem } from "../lib/economy";
 
@@ -121,7 +122,7 @@ export default function Store() {
       <div className="mb-6 flex items-center gap-3">
         <Link
           to="/"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-button border border-border bg-surface text-muted transition-colors duration-200 hover:text-body active:scale-95"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-btn border border-border bg-surface text-muted transition-colors duration-200 hover:text-body active:scale-95"
         >
           <ChevronLeftIcon width={18} height={18} />
         </Link>
@@ -164,73 +165,20 @@ export default function Store() {
               <div className="flex flex-col gap-2.5">
                 {tierItems.map((item) => {
                   const owned = ownedById[item.id];
-                  const equipped = owned?.equipped ?? false;
-                  const canAfford = economy.aura_balance >= item.cost_aura;
-                  const isPending = pendingId === item.id;
-                  const justActioned = justActionedId === item.id;
-
-                  let buttonLabel;
-                  let buttonAction;
-                  let buttonColor;
-                  let buttonBorder;
-                  let disabled = isPending;
-
-                  if (owned) {
-                    if (equipped) {
-                      buttonLabel = "Equipped";
-                      buttonAction = () => handleUnequip(item);
-                      buttonColor = "#34d399";
-                      buttonBorder = "rgba(52,211,153,0.35)";
-                    } else {
-                      buttonLabel = "Equip";
-                      buttonAction = () => handleEquip(item);
-                      buttonColor = "#5ab4ff";
-                      buttonBorder = "rgba(90,180,255,0.35)";
-                    }
-                  } else if (locked) {
-                    buttonLabel = "Locked";
-                    buttonAction = undefined;
-                    buttonColor = "#6e7a8a";
-                    buttonBorder = "rgba(255,255,255,0.07)";
-                    disabled = true;
-                  } else {
-                    buttonLabel = null;
-                    buttonAction = () => handleBuy(item);
-                    buttonColor = canAfford ? "#5ab4ff" : "#6e7a8a";
-                    buttonBorder = "rgba(255,255,255,0.07)";
-                    disabled = disabled || !canAfford;
-                  }
-
                   return (
-                    <div
+                    <StoreItemRow
                       key={item.id}
-                      className="card-shadow flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-4 transition-opacity duration-200"
-                      style={{ opacity: locked ? 0.5 : 1 }}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-[13px] font-medium text-body">{item.name}</p>
-                          <span className="shrink-0 rounded-pill bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
-                            {item.category}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-muted leading-relaxed">{item.description}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={buttonAction}
-                        disabled={disabled}
-                        className={`flex shrink-0 items-center gap-1.5 rounded-button border px-3 py-2 text-[12px] font-medium transition-colors duration-200 disabled:cursor-not-allowed active:scale-95 ${justActioned ? "pop-in" : ""}`}
-                        style={{ color: buttonColor, borderColor: buttonBorder }}
-                      >
-                        {buttonLabel ?? (
-                          <>
-                            <SparkleIcon width={12} height={12} />
-                            {item.cost_aura}
-                          </>
-                        )}
-                      </button>
-                    </div>
+                      item={item}
+                      owned={Boolean(owned)}
+                      equipped={owned?.equipped ?? false}
+                      locked={locked}
+                      canAfford={economy.aura_balance >= item.cost_aura}
+                      pending={pendingId === item.id}
+                      justActioned={justActionedId === item.id}
+                      onBuy={() => handleBuy(item)}
+                      onEquip={() => handleEquip(item)}
+                      onUnequip={() => handleUnequip(item)}
+                    />
                   );
                 })}
               </div>

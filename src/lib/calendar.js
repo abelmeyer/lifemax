@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { todayStr, dateToStr, addDaysStr } from "./dateUtils";
 import { fetchHabitSettings, countHabitsMet } from "./habits";
+import { summarizeSession } from "./workoutSession";
 
 // Builds a 7-cell (week strip) or 35/42-cell (month grid) array. Cells
 // outside the requested month carry inMonth:false and a null dateStr so
@@ -45,15 +46,49 @@ async function fetchRange(table, userId, startDate, endDate) {
   return data ?? [];
 }
 
+// Tables added by a later migration must not break the calendar for someone
+// who hasn't run it yet — an absent table just contributes nothing.
+const MISSING_TABLE_CODES = new Set(["42P01", "PGRST205", "PGRST202"]);
+
+async function fetchRangeOptional(table, userId, startDate, endDate) {
+  const { data, error } = await supabase
+    .from(table)
+    .select("*")
+    .eq("user_id", userId)
+    .gte("date", startDate)
+    .lte("date", endDate);
+  if (error) {
+    if (MISSING_TABLE_CODES.has(error.code)) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
+async function fetchAccomplishmentsRange(userId, startDate, endDate) {
+  const { data, error } = await supabase
+    .from("accomplishments")
+    .select("achievement_id,earned_date")
+    .eq("user_id", userId)
+    .gte("earned_date", startDate)
+    .lte("earned_date", endDate);
+  if (error) {
+    if (MISSING_TABLE_CODES.has(error.code)) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function fetchRangeSummary(userId, startDate, endDate) {
-  const [sets, cardio, logs, meals, settings] = await Promise.all([
+  const [sets, cardio, logs, meals, settings, gratitude, badges] = await Promise.all([
     fetchRange("workout_sets", userId, startDate, endDate),
     fetchRange("cardio_sessions", userId, startDate, endDate),
     fetchRange("habit_logs", userId, startDate, endDate),
     fetchRange("meals", userId, startDate, endDate),
     fetchHabitSettings(userId),
+    fetchRangeOptional("gratitude_entries", userId, startDate, endDate),
+    fetchAccomplishmentsRange(userId, startDate, endDate),
   ]);
-  return { sets, cardio, logs, meals, pullupTarget: settings.pullup_target };
+  return { sets, cardio, logs, meals, gratitude, badges, pullupTarget: settings.pullup_target };
 }
 
 export function classifyDay(dateStr, summary, today = todayStr()) {
@@ -86,6 +121,8 @@ export function buildDayDetail(dateStr, summary, exercisesById) {
   const cardio = summary.cardio.filter((c) => c.date === dateStr);
   const log = summary.logs.find((l) => l.date === dateStr) ?? null;
   const meals = summary.meals.filter((m) => m.date === dateStr);
+  const gratitude = (summary.gratitude ?? []).find((g) => g.date === dateStr) ?? null;
+  const badges = (summary.badges ?? []).filter((b) => b.earned_date === dateStr);
 
   const byExercise = new Map();
   for (const s of sets) {
@@ -100,9 +137,13 @@ export function buildDayDetail(dateStr, summary, exercisesById) {
   return {
     date: dateStr,
     exerciseGroups: [...byExercise.values()],
+    session: summarizeSession(sets, 0),
     cardio,
     habitLog: log,
     pullupTarget: summary.pullupTarget,
     meals,
+    gratitude,
+    badges,
+    status: classifyDay(dateStr, summary),
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "../icons";
 import { getMonthGrid, fetchRangeSummary, classifyDay, buildDayDetail } from "../../lib/calendar";
 import { todayStr } from "../../lib/dateUtils";
@@ -12,14 +12,17 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export default function MonthModal({ userId, onClose }) {
+export default function MonthModal({ userId, initialDate = null, onClose }) {
   const now = new Date();
-  const [viewedYear, setViewedYear] = useState(now.getFullYear());
-  const [viewedMonth, setViewedMonth] = useState(now.getMonth());
+  const initial = initialDate ? new Date(initialDate + "T00:00:00") : now;
+  const [viewedYear, setViewedYear] = useState(initial.getFullYear());
+  const [viewedMonth, setViewedMonth] = useState(initial.getMonth());
   const [summary, setSummary] = useState(null);
   const [exercisesById, setExercisesById] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
 
   const today = todayStr();
   const isCurrentMonth = viewedYear === now.getFullYear() && viewedMonth === now.getMonth();
@@ -33,17 +36,41 @@ export default function MonthModal({ userId, onClose }) {
     });
   }, []);
 
+  // Changing month clears the drill-down, but the first load must keep the day
+  // the caller asked to open on. Tracked as "which month the selection belongs
+  // to" rather than "is this the first run": StrictMode double-invokes this
+  // effect on mount, and a first-run flag reads the second invocation as a
+  // month change and throws away initialDate.
+  const selectionMonthRef = useRef(`${viewedYear}-${viewedMonth}`);
   useEffect(() => {
+    const monthKey = `${viewedYear}-${viewedMonth}`;
+    if (selectionMonthRef.current !== monthKey) {
+      selectionMonthRef.current = monthKey;
+      setSelectedDate(null);
+    }
     setLoading(true);
-    setSelectedDate(null);
+    setLoadFailed(false);
     const inMonthCells = grid.filter((c) => c.inMonth);
     const start = inMonthCells[0].dateStr;
     const end = inMonthCells[inMonthCells.length - 1].dateStr;
-    fetchRangeSummary(userId, start, end).then((data) => {
-      setSummary(data);
-      setLoading(false);
-    });
-  }, [userId, viewedYear, viewedMonth, grid]);
+    // Fast month-switching can land these out of order, so only the fetch the
+    // modal is still showing is allowed to paint.
+    let current = true;
+    fetchRangeSummary(userId, start, end)
+      .then((data) => {
+        if (!current) return;
+        setSummary(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!current) return;
+        setLoadFailed(true);
+        setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [userId, viewedYear, viewedMonth, grid, reloadToken]);
 
   function goPrevMonth() {
     if (viewedMonth === 0) {
@@ -65,6 +92,25 @@ export default function MonthModal({ userId, onClose }) {
   }
 
   const dayDetail = selectedDate && summary ? buildDayDetail(selectedDate, summary, exercisesById) : null;
+
+  const monthStats = useMemo(() => {
+    if (!summary) return { fullDays: 0, workoutDays: 0, volume: 0, badges: 0 };
+    const inMonth = grid.filter((c) => c.inMonth).map((c) => c.dateStr);
+    const monthDates = new Set(inMonth);
+    return {
+      fullDays: inMonth.filter((d) => classifyDay(d, summary, today) === "full").length,
+      workoutDays: new Set(summary.sets.filter((s) => monthDates.has(s.date)).map((s) => s.date)).size,
+      volume: summary.sets
+        .filter((s) => monthDates.has(s.date))
+        .reduce((sum, s) => sum + (s.weight_lbs ?? 0) * (s.reps ?? 0), 0),
+      badges: (summary.badges ?? []).filter((b) => monthDates.has(b.earned_date)).length,
+    };
+  }, [summary, grid, today]);
+
+  const badgeDates = useMemo(
+    () => new Set((summary?.badges ?? []).map((b) => b.earned_date)),
+    [summary],
+  );
 
   return (
     <div
@@ -130,10 +176,41 @@ export default function MonthModal({ userId, onClose }) {
             <div className="flex justify-center py-10">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
             </div>
+          ) : loadFailed ? (
+            <div
+              className="flex items-center justify-between gap-3 rounded-card border px-4 py-3 text-[13px]"
+              style={{ borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)", color: "#f87171" }}
+            >
+              <span className="leading-relaxed">Couldn't load this month.</span>
+              <button
+                type="button"
+                onClick={() => setReloadToken((t) => t + 1)}
+                className="shrink-0 rounded-btn border px-2.5 py-1.5 text-[12px] font-medium transition-colors duration-200 hover:bg-white/[0.04]"
+                style={{ borderColor: "rgba(248,113,113,0.3)" }}
+              >
+                Retry
+              </button>
+            </div>
           ) : dayDetail ? (
             <DayDetail detail={dayDetail} />
           ) : (
             <>
+              <div className="mb-4 grid grid-cols-4 gap-2">
+                {[
+                  { label: "Full days", value: monthStats.fullDays, color: "#34d399" },
+                  { label: "Workouts", value: monthStats.workoutDays, color: "#5ab4ff" },
+                  { label: "Volume", value: `${Math.round(monthStats.volume / 1000)}k`, color: "#e8eaf0" },
+                  { label: "Badges", value: monthStats.badges, color: "#e3bd54" },
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-btn border border-border bg-surface px-2 py-2.5 text-center">
+                    <p className="font-mono text-[16px] font-semibold" style={{ color: stat.color }}>
+                      {stat.value}
+                    </p>
+                    <p className="mt-0.5 text-[9px] uppercase tracking-wide text-muted">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
               <div className="mb-2 grid grid-cols-7 gap-1">
                 {WEEKDAY_LABELS.map((l, i) => (
                   <div key={i} className="text-center text-[11px] text-muted">
@@ -157,8 +234,15 @@ export default function MonthModal({ userId, onClose }) {
                       key={i}
                       type="button"
                       onClick={() => setSelectedDate(cell.dateStr)}
-                      className="flex flex-col items-center gap-1.5 rounded-btn py-2 transition-colors duration-200 hover:bg-white/[0.04]"
+                      className="relative flex flex-col items-center gap-1.5 rounded-btn py-2 transition-colors duration-200 hover:bg-white/[0.04]"
                     >
+                      {badgeDates.has(cell.dateStr) && (
+                        <span
+                          className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full"
+                          style={{ background: "#e3bd54" }}
+                          aria-label="Badge earned"
+                        />
+                      )}
                       <span className="font-mono text-[12px]" style={{ color: isToday ? "#5ab4ff" : "#e8eaf0" }}>
                         {cell.day}
                       </span>

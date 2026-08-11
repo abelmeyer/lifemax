@@ -1,20 +1,12 @@
-import { getStageForLevel, resolveAppearance } from "../../lib/avatarConfig";
+import { getStageForLevel, resolveAppearance, STAGE_PARAMS } from "../../lib/avatarConfig";
 import { HairBack, HairFront, Face, FacialHairLayer } from "./appearance";
 
-// Stage 1 = out of shape, stage 6 = lean/defined. Silhouette proportions plus
-// an on-body definition level (def) that drives skin-shade muscle detail —
-// six-pack lines, chest shading from *earned gear* are separate accent-colored
-// layers drawn on top, never baked into the base body.
-const STAGE_PARAMS = [
-  { shoulder: 60, waist: 70, armWidth: 18, legWidth: 23, rim: 0, def: 0 },
-  { shoulder: 66, waist: 62, armWidth: 19, legWidth: 23, rim: 0.1, def: 0.15 },
-  { shoulder: 72, waist: 56, armWidth: 19, legWidth: 24, rim: 0.2, def: 0.3 },
-  { shoulder: 78, waist: 51, armWidth: 20, legWidth: 24, rim: 0.35, def: 0.5 },
-  { shoulder: 84, waist: 47, armWidth: 21, legWidth: 25, rim: 0.5, def: 0.7 },
-  { shoulder: 90, waist: 44, armWidth: 22, legWidth: 26, rim: 0.7, def: 1 },
-];
-
-export default function AvatarBody({ level, metrics, pulse, customization }) {
+// Silhouette proportions come from STAGE_PARAMS in lib/avatarConfig.js, which
+// gear and store cosmetics also read (via getStageGeometry) so every layer
+// stays glued to the body across all six stages. Six-pack lines and chest
+// shading from *earned gear* are separate accent-colored layers drawn on top,
+// never baked into the base body.
+export default function AvatarBody({ level, metrics, pulse, customization, hideDefaultBottom = false }) {
   const stage = getStageForLevel(level);
   const p = STAGE_PARAMS[stage - 1];
   const { cx, shoulderY, waistY, hipY, legHeight, armHeight } = metrics;
@@ -202,7 +194,11 @@ export default function AvatarBody({ level, metrics, pulse, customization }) {
         <path d={torsoPath} fill="none" stroke="#5ab4ff" strokeOpacity={p.rim * 0.4} strokeWidth="1.5" />
       )}
 
-      {/* default training shorts — cosmetic Bottom items draw over these */}
+      {/* Default training shorts. Hidden when a Bottom cosmetic is equipped —
+          a purchased garment replaces them rather than layering over, since
+          the default pair pokes out from underneath at the narrower stages. */}
+      {!hideDefaultBottom && (
+      <>
       <path
         d={`M ${cx - shortsHalf} ${shortsTop + 4}
             Q ${cx - shortsHalf} ${shortsTop} ${cx - shortsHalf + 5} ${shortsTop}
@@ -228,6 +224,8 @@ export default function AvatarBody({ level, metrics, pulse, customization }) {
         stroke="#383846"
         strokeWidth="1.3"
       />
+      </>
+      )}
 
       {/* head */}
       <circle cx={cx} cy={shoulderY - 24} r="19" fill={skin.base} stroke={skin.line} strokeWidth="1.5" />
@@ -238,4 +236,3 @@ export default function AvatarBody({ level, metrics, pulse, customization }) {
   );
 }
 
-export { STAGE_PARAMS };

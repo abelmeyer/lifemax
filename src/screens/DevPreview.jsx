@@ -9,6 +9,7 @@ import { ACHIEVEMENTS, CATEGORIES } from "../lib/accomplishments";
 import DayDetail from "../components/calendar/DayDetail";
 import Gratitude from "./Gratitude";
 import Accomplishments from "./Accomplishments";
+import Dashboard from "./Dashboard";
 import { AccomplishmentsProvider } from "../lib/AccomplishmentsContext";
 import AvatarBody from "../components/avatar/AvatarBody";
 import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
@@ -63,12 +64,15 @@ const SAMPLE_STREAKS = {
 // Renders the real AvatarSetup screen against stub contexts so its layout
 // can be eyeballed without auth or a database. Reached at /preview/setup.
 export function DevSetupPreview({ mode = "setup" }) {
-  const auth = { user: { id: "dev-preview" }, loading: false };
+  const auth = { user: { id: "dev-preview" }, loading: false, signOut: async () => {} };
   const custom = {
     loading: false,
     customization: null,
     needsSetup: true,
+    tableMissing: false,
+    loadFailed: false,
     save: async (v) => v,
+    skipSetup: () => {},
   };
   return (
     <AuthContext.Provider value={auth}>
@@ -92,6 +96,9 @@ export function DevSettingsPreview() {
     loading: false,
     customization: { skin_tone: "bronze", hair_style: "curly", hair_color: "black", facial_hair: "beard" },
     needsSetup: false,
+    tableMissing: false,
+    loadFailed: false,
+    skipSetup: () => {},
     save: async (v) => v,
   };
   return (
@@ -277,6 +284,32 @@ export function DevJournalPreview() {
   );
 }
 
+// The Dashboard with every provider stubbed. Pair with scripts/preview-shot.mjs
+// (which mocks the Supabase REST layer) to see it with realistic data.
+export function DevDashboardPreview() {
+  const auth = { user: { id: "dev-preview", email: "you@example.com" }, loading: false, signOut: async () => {} };
+  const custom = {
+    loading: false,
+    customization: { skin_tone: "bronze", hair_style: "short", hair_color: "black", facial_hair: "stubble" },
+    needsSetup: false,
+    tableMissing: false,
+    loadFailed: false,
+    skipSetup: () => {},
+    save: async (v) => v,
+  };
+  return (
+    <AuthContext.Provider value={auth}>
+      <CustomizationContext.Provider value={custom}>
+        <AccomplishmentsProvider>
+          <div className="mx-auto max-w-md px-4 py-8">
+            <Dashboard />
+          </div>
+        </AccomplishmentsProvider>
+      </CustomizationContext.Provider>
+    </AuthContext.Provider>
+  );
+}
+
 function Section({ title, children }) {
   return (
     <div className="mb-8">
@@ -397,6 +430,29 @@ export default function DevPreview() {
               </div>
             </Cell>
           ))}
+        </div>
+      </Section>
+
+      <Section title="Store items at the physique extremes (stage 1 vs stage 6)">
+        <p className="mb-2 text-[12px] leading-relaxed text-muted">
+          The shoulders span 60→90 and the waist 70→44 across the six stages, so any cosmetic drawn at fixed pixel
+          offsets detaches from the body here. Every garment must still sit on the limb it covers in BOTH columns.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {SAMPLE_ITEMS.filter((i) => !["Aura", "Display", "Accessory"].includes(i.category)).flatMap((item) =>
+            [1, 32].map((lvl) => (
+              <Cell key={`${item.id}-${lvl}`} label={`${item.name} · L${lvl}`} width={124}>
+                <div style={{ width: 112, aspectRatio: "300 / 290" }}>
+                  <Avatar
+                    level={lvl}
+                    habitStreaks={{}}
+                    customization={{ skin_tone: "tan", hair_style: "short", hair_color: "brown", facial_hair: "none" }}
+                    equippedCosmetics={[item]}
+                  />
+                </div>
+              </Cell>
+            )),
+          )}
         </div>
       </Section>
 

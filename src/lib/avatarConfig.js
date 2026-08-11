@@ -19,6 +19,61 @@ export function getStageLabel(level) {
   return STAGE_LABELS[getStageForLevel(level) - 1];
 }
 
+// ---- Physique geometry, shared by the body and every layer drawn on it ----
+// Stage 1 = out of shape, stage 6 = lean/defined. `def` scales the on-body
+// muscle shading. These live here rather than in AvatarBody because gear and
+// store cosmetics must anchor to the SAME numbers — art with hardcoded
+// offsets detaches from the silhouette at the extreme stages (the shoulders
+// span 60→90 and the waist 70→44 across the range).
+export const STAGE_PARAMS = [
+  { shoulder: 60, waist: 70, armWidth: 18, legWidth: 23, rim: 0, def: 0 },
+  { shoulder: 66, waist: 62, armWidth: 19, legWidth: 23, rim: 0.1, def: 0.15 },
+  { shoulder: 72, waist: 56, armWidth: 19, legWidth: 24, rim: 0.2, def: 0.3 },
+  { shoulder: 78, waist: 51, armWidth: 20, legWidth: 24, rim: 0.35, def: 0.5 },
+  { shoulder: 84, waist: 47, armWidth: 21, legWidth: 25, rim: 0.5, def: 0.7 },
+  { shoulder: 90, waist: 44, armWidth: 22, legWidth: 26, rim: 0.7, def: 1 },
+];
+
+/**
+ * Resolved pixel geometry of the body at a given level: the exact rectangles
+ * AvatarBody draws, so a sleeve, cuff or belt can be positioned off the same
+ * values instead of guessing.
+ */
+export function getStageGeometry(level, metrics) {
+  const p = STAGE_PARAMS[getStageForLevel(level) - 1];
+  const { cx, shoulderY, waistY, hipY, legHeight, armHeight } = metrics;
+
+  const shoulderHalf = p.shoulder / 2;
+  const waistHalf = p.waist / 2;
+
+  return {
+    ...p,
+    cx,
+    shoulderY,
+    waistY,
+    hipY,
+    legHeight,
+    armHeight,
+    shoulderHalf,
+    waistHalf,
+
+    // arms
+    armLeftX: cx - shoulderHalf - p.armWidth - 2,
+    armRightX: cx + shoulderHalf + 2,
+    armTopY: shoulderY + 8,
+    armBottomY: shoulderY + 8 + armHeight,
+
+    // legs (anchored to the centerline, matching AvatarBody)
+    legLeftX: cx - p.legWidth - 1.5,
+    legRightX: cx + 1.5,
+    legTopY: hipY - 2,
+    legBottomY: hipY - 2 + legHeight,
+
+    // the default shorts' half-width, which garments must cover
+    hipHalf: Math.max(waistHalf + 5, p.legWidth + 4),
+  };
+}
+
 // ---- Appearance customization (chosen at account setup, editable later) ----
 // Each option is { id, label, ...colors }. Ids are what's stored in the
 // avatar_customization table; keep them stable once users exist.

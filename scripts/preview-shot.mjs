@@ -89,6 +89,31 @@ page.on("console", (m) => {
   if (m.type() === "error") errors.push(m.text());
 });
 
+// Storage: signed-URL creation plus the image fetch that follows it. Without
+// this the Dashboard hangs forever on its progress-photo tile.
+const PIXEL = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+await page.route("**/storage/v1/**", async (route) => {
+  const req = route.request();
+  if (req.method() === "POST" && req.url().includes("/object/sign/")) {
+    let paths = [];
+    try {
+      paths = JSON.parse(req.postData() ?? "{}").paths ?? [];
+    } catch {
+      paths = [];
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(paths.map((p) => ({ path: p, signedURL: `/object/preview/${p}` }))),
+    });
+  }
+  return route.fulfill({ status: 200, contentType: "image/png", body: PIXEL });
+});
+
 await page.route("**/rest/v1/**", async (route) => {
   const req = route.request();
   const u = new URL(req.url());

@@ -51,30 +51,35 @@ function Swatch({ color, selected, label, onSelect }) {
 // mode="setup": forced first-login flow (no back button, "Enter Lifemaxx").
 // mode="edit": reachable any time from the Dashboard avatar card.
 export default function AvatarSetup({ mode = "setup" }) {
-  const { user } = useAuth();
-  const { customization, save } = useCustomization();
+  const { user, signOut } = useAuth();
+  const { customization, save, skipSetup, tableMissing, loadFailed } = useCustomization();
   const navigate = useNavigate();
   const [values, setValues] = useState({ ...DEFAULT_CUSTOMIZATION, ...(customization ?? {}) });
   const [level, setLevel] = useState(1);
+  const [levelUnknown, setLevelUnknown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const isEdit = mode === "edit";
 
-  // In edit mode the preview shows your avatar at its real current level;
-  // during first-time setup you start at level 1 by definition.
+  // The preview always shows your real level. Setup isn't only reached by
+  // brand-new accounts — an existing user with no customization row (the day
+  // the migration lands) sees it too, and rendering them at level 1 would
+  // misreport their physique stage.
   useEffect(() => {
-    if (!isEdit) return;
     let mounted = true;
     fetchAvatarState(user.id)
       .then((s) => {
         if (mounted) setLevel(s.level);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (mounted) setLevelUnknown(true);
+      });
     return () => {
       mounted = false;
     };
-  }, [isEdit, user.id]);
+  }, [user.id]);
 
   function set(key, id) {
     setValues((v) => ({ ...v, [key]: id }));
@@ -85,12 +90,23 @@ export default function AvatarSetup({ mode = "setup" }) {
     setSaving(true);
     try {
       await save(values);
+      setSaveFailed(false);
       if (isEdit) navigate("/");
     } catch (e) {
       setError(e.message ?? "Could not save your avatar — try again.");
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
+  }
+
+  // Leaving setup without saving. Without this the gate is a dead end: it
+  // replaces the whole app, and a write that can never succeed (unrun
+  // migration, missing RLS policy) would otherwise lock the user out of
+  // everything, not just the avatar.
+  function handleSkip() {
+    skipSetup();
+    if (isEdit) navigate("/");
   }
 
   const currentStage = getStageForLevel(level);
@@ -118,13 +134,33 @@ export default function AvatarSetup({ mode = "setup" }) {
         </div>
       </div>
 
+      {tableMissing && (
+        <div
+          className="mb-4 rounded-card border px-4 py-3 text-[12px] leading-relaxed"
+          style={{ borderColor: "rgba(227,189,84,0.3)", background: "rgba(227,189,84,0.07)", color: "#e3bd54" }}
+        >
+          Appearance can't be saved yet — run <span className="font-mono">supabase/sprint10_migration.sql</span> in the
+          Supabase SQL editor first. You can still look around; your avatar uses the default look until then.
+        </div>
+      )}
+
+      {loadFailed && !tableMissing && (
+        <div
+          className="mb-4 rounded-card border px-4 py-3 text-[12px] leading-relaxed"
+          style={{ borderColor: "rgba(227,189,84,0.3)", background: "rgba(227,189,84,0.07)", color: "#e3bd54" }}
+        >
+          Couldn't load your saved appearance, so these are the defaults — saving now would replace whatever is stored.
+          Reload the app first if you'd rather not risk that.
+        </div>
+      )}
+
       <div className="card-shadow mb-4 rounded-card border border-border bg-surface p-4">
         <div className="mx-auto" style={{ maxWidth: 230, aspectRatio: "300 / 290" }}>
           <Avatar level={level} habitStreaks={{}} customization={values} />
         </div>
         <p className="text-center text-[12px] text-muted">
           {STAGE_LABELS[currentStage - 1]}
-          {isEdit ? ` · Level ${level}` : ""}
+          {levelUnknown ? "" : ` · Level ${level}`}
         </p>
       </div>
 
@@ -249,11 +285,30 @@ export default function AvatarSetup({ mode = "setup" }) {
       <button
         type="button"
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || tableMissing}
         className="w-full rounded-btn bg-accent py-3.5 text-[15px] font-medium text-[#0d0d12] transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50"
       >
         {saving ? "Saving…" : isEdit ? "Save changes" : "Enter Lifemaxx"}
       </button>
+
+      {!isEdit && (
+        <div className="mt-3 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="text-[13px] text-muted transition-colors duration-200 hover:text-body"
+          >
+            {saveFailed || tableMissing ? "Continue without saving" : "Skip for now"}
+          </button>
+          <button
+            type="button"
+            onClick={signOut}
+            className="text-[12px] text-muted transition-colors duration-200 hover:text-body"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
     </>
   );
 

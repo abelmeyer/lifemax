@@ -49,7 +49,10 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
     const weightNum = parseFloat(weight);
     const repsNum = parseInt(reps, 10);
     const priorBest = history?.bestWeight ?? 0;
-    const setNumber = (history?.todaysSets.length ?? 0) + 1;
+    // Next number past the highest already used, not count+1: after deleting a
+    // middle set the count no longer matches the numbering, and count+1 would
+    // collide with an existing set_number.
+    const setNumber = Math.max(0, ...(history?.todaysSets ?? []).map((s) => s.set_number ?? 0)) + 1;
 
     try {
       const newSet = await logSet({

@@ -163,23 +163,45 @@ export function SignatureHoodie({ metrics, geo }) {
 
 export function CutoffTee({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const { cx, shoulderY, waistY } = metrics;
+  const { cx, shoulderY, waistY, hipY } = metrics;
   const midY = (shoulderY + waistY) / 2;
   const topY = shoulderY - 3;
-  const hemY = waistY + 1;
-  // Cotton hangs looser than the tank's ribbed knit: 3px proud of the body at
-  // the shoulder and the hem, which at stage 1 is the WIDER of the two.
+  // Untucked, so the hem falls onto the shorts: hemmed at the waist it leaves
+  // a bare midriff at every stage, since the shorts don't start until hipY-4.
+  const hemY = hipY - 2;
   const shoulderOut = g.shoulderHalf + 3;
-  const hemOut = torsoHalf(g, hemY) + 3;
+  const hemOut = g.waistHalf + 5.5;
   const sideCtrl = g.shoulderHalf + 9;
   const neckHalf = 10;
-  // The cut runs across the top of the arm itself, so the cap has to be
-  // measured off the arm rect — its inner edge meets the torso at every stage.
-  const capW = g.armWidth + 4;
-  const capTop = g.armTopY - 6;
+  // The cut runs across the arm itself, so the caps are measured off the arm
+  // rects and run far enough inboard to finish underneath the body panel —
+  // drawn over it they'd read as two pauldrons stuck to the shoulders.
+  const capTop = g.armTopY - 5;
   const capBot = g.armTopY + 12;
+  const caps = [
+    { x0: g.armLeftX - 2, x1: g.armLeftX + g.armWidth + 9 },
+    { x0: g.armRightX - 9, x1: g.armRightX + g.armWidth + 2 },
+  ];
   return (
     <g>
+      {caps.map(({ x0, x1 }) => (
+        <path
+          key={x0}
+          d={`M ${x0} ${capBot}
+              L ${x0} ${capTop + 6}
+              Q ${x0} ${capTop} ${x0 + 7} ${capTop}
+              L ${x1} ${capTop}
+              L ${x1} ${capBot}
+              L ${x0 + (x1 - x0) * 0.76} ${capBot - 1.8}
+              L ${x0 + (x1 - x0) * 0.55} ${capBot + 1.1}
+              L ${x0 + (x1 - x0) * 0.34} ${capBot - 1.6}
+              L ${x0 + (x1 - x0) * 0.15} ${capBot + 0.9}
+              Z`}
+          fill="#9aa2ae"
+          stroke="#6f7784"
+          strokeWidth="1.4"
+        />
+      ))}
       <path
         d={`M ${cx - shoulderOut} ${topY}
             Q ${cx - shoulderOut * 0.6} ${shoulderY - 9} ${cx - neckHalf} ${shoulderY - 7}
@@ -193,37 +215,19 @@ export function CutoffTee({ metrics, geo }) {
         stroke="#6f7784"
         strokeWidth="1.4"
       />
-      {[g.armLeftX - 2, g.armRightX - 2].map((x) => (
-        <path
-          key={x}
-          d={`M ${x} ${capBot}
-              L ${x} ${capTop + 5}
-              Q ${x} ${capTop} ${x + capW / 2} ${capTop}
-              Q ${x + capW} ${capTop} ${x + capW} ${capTop + 5}
-              L ${x + capW} ${capBot}
-              L ${x + capW * 0.78} ${capBot - 2.6}
-              L ${x + capW * 0.56} ${capBot + 1.4}
-              L ${x + capW * 0.34} ${capBot - 2.4}
-              L ${x + capW * 0.14} ${capBot + 1.2}
-              Z`}
-          fill="#9aa2ae"
-          stroke="#6f7784"
-          strokeWidth="1.4"
-        />
-      ))}
-      {/* raw armhole: the seam was cut through, so the edge is a bare line on
-          the body with loose threads rather than a hemmed stitch */}
+      {/* raw armhole: the seam was cut straight through, so the join is a bare
+          scissor line with a loose thread, not a finished hem */}
       {[-1, 1].map((s) => (
         <g key={s}>
           <path
-            d={`M ${cx + s * (shoulderOut - 1)} ${topY + 2} Q ${cx + s * (shoulderOut + 2)} ${shoulderY + 14} ${cx + s * (shoulderOut - 4)} ${shoulderY + 26}`}
+            d={`M ${cx + s * (shoulderOut - 1)} ${topY + 3} Q ${cx + s * (shoulderOut + 1)} ${shoulderY + 10} ${cx + s * (shoulderOut - 3)} ${shoulderY + 20}`}
             fill="none"
             stroke="#7f8794"
             strokeWidth="1.2"
             strokeDasharray="2.4 2.2"
           />
           <path
-            d={`M ${cx + s * (shoulderOut - 3)} ${shoulderY + 27} l ${s * 2} 3`}
+            d={`M ${cx + s * (shoulderOut - 2.5)} ${shoulderY + 21} l ${s * 2} 3`}
             stroke="#b4bcc7"
             strokeWidth="1"
             strokeLinecap="round"
@@ -256,14 +260,14 @@ export function CutoffTee({ metrics, geo }) {
 
 export function CompressionLongSleeve({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const { cx, shoulderY, waistY } = metrics;
+  const { cx, shoulderY, waistY, hipY } = metrics;
   const midY = (shoulderY + waistY) / 2;
   const topY = shoulderY - 2;
-  const hemY = waistY + 4;
+  const hemY = hipY - 2;
   // Second skin: the smallest margin that still hides the body's own outline
   // stroke. Any looser and it stops reading as compression wear.
   const shoulderOut = g.shoulderHalf + 1.5;
-  const hemOut = torsoHalf(g, hemY) + 2;
+  const hemOut = g.waistHalf + 4;
   const sideCtrl = g.shoulderHalf + 8;
   const neckHalf = 9;
   const sleeveW = g.armWidth + 2;
@@ -281,8 +285,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW}
             height={sleeveH}
             rx={g.armWidth / 2 + 1}
-            fill="#14141c"
-            stroke="#2b2b3a"
+            fill="#1e1e2a"
+            stroke="#4a4a64"
             strokeWidth="1.4"
           />
           <line
@@ -300,7 +304,7 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW - 1.2}
             height="7"
             rx="3"
-            fill="#1b1b26"
+            fill="#2a2a3a"
             stroke="#5ab4ff"
             strokeWidth="1.2"
             strokeOpacity="0.8"
@@ -316,8 +320,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             L ${cx - hemOut} ${hemY}
             Q ${cx - sideCtrl} ${midY} ${cx - shoulderOut} ${topY}
             Z`}
-        fill="#14141c"
-        stroke="#2b2b3a"
+        fill="#1e1e2a"
+        stroke="#4a4a64"
         strokeWidth="1.4"
       />
       {/* raglan seams and panel lines are the whole read on a black garment —
@@ -365,10 +369,10 @@ export function CompressionLongSleeve({ metrics, geo }) {
 
 export function TeamWindbreaker({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const { cx, shoulderY, waistY } = metrics;
+  const { cx, shoulderY, waistY, hipY } = metrics;
   const midY = (shoulderY + waistY) / 2;
   const topY = shoulderY - 4;
-  const hemY = waistY + 6;
+  const hemY = hipY - 2;
   const topOut = g.shoulderHalf + 5;
   // A shell blouses out instead of tapering, so the hem is driven by the
   // shoulder at the lean stages and by the waist at the wide ones.

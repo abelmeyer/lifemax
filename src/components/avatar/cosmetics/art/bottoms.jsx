@@ -43,7 +43,7 @@ export function MeshShorts({ metrics, geo }) {
   // short hangs with. The hem flares wider still.
   const half = g.hipHalf + 3;
   const hemHalf = half + 4;
-  const notchTip = bottom - 15;
+  const notchTip = bottom - 18;
   const halfAt = (y) => half + ((hemHalf - half) * (y - top)) / (bottom - top);
   const notchAt = (y) => (y < notchTip ? 0 : (4 * (y - notchTip)) / (bottom - notchTip));
 
@@ -71,7 +71,7 @@ export function MeshShorts({ metrics, geo }) {
             Q ${cx + half} ${top} ${cx + half} ${top + 5}
             L ${cx + hemHalf} ${bottom - 6}
             Q ${cx + hemHalf} ${bottom} ${cx + hemHalf - 5} ${bottom}
-            L ${cx + 4} ${bottom} L ${cx} ${notchTip} L ${cx - 4} ${bottom}
+            L ${cx + 5} ${bottom} L ${cx} ${notchTip} L ${cx - 5} ${bottom}
             L ${cx - hemHalf + 5} ${bottom}
             Q ${cx - hemHalf} ${bottom} ${cx - hemHalf} ${bottom - 6}
             Z`}
@@ -93,8 +93,9 @@ export function MeshShorts({ metrics, geo }) {
         strokeWidth="1.2"
       />
       <path
-        d={`M ${cx - 7} ${bandBottom - 1} Q ${cx - 4} ${bandBottom + 6} ${cx - 1} ${bandBottom + 2}
-            M ${cx + 7} ${bandBottom - 1} Q ${cx + 4} ${bandBottom + 6} ${cx + 1} ${bandBottom + 2}`}
+        d={`M ${cx - 6} ${bandBottom - 5} Q ${cx} ${bandBottom - 1} ${cx + 6} ${bandBottom - 5}
+            M ${cx - 3.5} ${bandBottom - 2} L ${cx - 4.5} ${bandBottom + 7}
+            M ${cx + 3.5} ${bandBottom - 2} L ${cx + 4.5} ${bandBottom + 7}`}
         fill="none"
         stroke="#c9cfdb"
         strokeWidth="1.5"
@@ -103,7 +104,7 @@ export function MeshShorts({ metrics, geo }) {
       <path d={`M ${cx - half + 1} ${bandBottom + 3} L ${cx - hemHalf + 1} ${bottom - 5}`} stroke="#c9cfdb" strokeWidth="1.5" strokeOpacity="0.75" />
       <path d={`M ${cx + half - 1} ${bandBottom + 3} L ${cx + hemHalf - 1} ${bottom - 5}`} stroke="#c9cfdb" strokeWidth="1.5" strokeOpacity="0.75" />
       <path
-        d={`M ${cx - hemHalf + 2} ${bottom - 3} L ${cx - 5} ${bottom - 3} M ${cx + 5} ${bottom - 3} L ${cx + hemHalf - 2} ${bottom - 3}`}
+        d={`M ${cx - hemHalf + 2} ${bottom - 3} L ${cx - 6} ${bottom - 3} M ${cx + 6} ${bottom - 3} L ${cx + hemHalf - 2} ${bottom - 3}`}
         stroke="#3b4356"
         strokeWidth="2"
       />
@@ -129,7 +130,7 @@ export function CompressionTights({ metrics, geo }) {
   return (
     <g>
       {tubes.map((x) => (
-        <rect key={x} x={x} y={hipY + 10} width={tubeW} height={ankle - hipY - 10} rx="9" fill="#1a1a24" stroke="#2e2e3d" strokeWidth="1.3" />
+        <rect key={x} x={x} y={hipY + 10} width={tubeW} height={ankle - hipY - 10} rx="9" fill="#242433" stroke="#3f3f57" strokeWidth="1.3" />
       ))}
       <path
         d={`M ${cx - half} ${top + 4}
@@ -143,8 +144,8 @@ export function CompressionTights({ metrics, geo }) {
             L ${g.legLeftX - 1} ${taperEnd}
             Q ${cx - half + 2} ${hipY + 12} ${cx - half} ${top + 4}
             Z`}
-        fill="#1a1a24"
-        stroke="#2e2e3d"
+        fill="#242433"
+        stroke="#3f3f57"
         strokeWidth="1.3"
       />
       <path
@@ -153,25 +154,36 @@ export function CompressionTights({ metrics, geo }) {
             L ${cx + half - 5} ${top}
             Q ${cx + half} ${top} ${cx + half} ${top + 4}
             L ${cx + half} ${bandBottom} L ${cx - half} ${bandBottom} Z`}
-        fill="#26263a"
-        stroke="#2e2e3d"
+        fill="#32324a"
+        stroke="#3f3f57"
         strokeWidth="1.1"
       />
       <line x1={cx - half + 2} y1={bandBottom - 1} x2={cx + half - 2} y2={bandBottom - 1} stroke="#5ab4ff" strokeWidth="1.6" strokeOpacity="0.9" />
       {tubes.map((x, i) => {
-        const seam = i === 0 ? x + 3 : x + tubeW - 3;
+        const seam = i === 0 ? x + tubeW * 0.42 : x + tubeW * 0.58;
         const knee = g.legTopY + 34;
         return (
           <g key={x}>
+            {/* Outer-thigh panel. Held inside the straight section of the tube
+                (its rx rounds the top and bottom 9px) so it needs no clip path
+                — clip ids would collide between the store list and the body. */}
+            <rect
+              x={i === 0 ? x + 0.8 : seam}
+              y={hipY + 28}
+              width={tubeW * 0.42 - 0.8}
+              height={ankle - 9 - (hipY + 28)}
+              fill="#2f2f46"
+            />
             <line x1={seam} y1={hipY + 22} x2={seam} y2={ankle - 5} stroke="#5ab4ff" strokeWidth="1.5" strokeOpacity="0.7" />
             <path d={`M ${x + 3} ${knee} Q ${x + tubeW / 2} ${knee + 6} ${x + tubeW - 3} ${knee}`} fill="none" stroke="#5ab4ff" strokeWidth="1.3" strokeOpacity="0.5" />
             <path d={`M ${x + 3} ${knee + 7} Q ${x + tubeW / 2} ${knee + 13} ${x + tubeW - 3} ${knee + 7}`} fill="none" stroke="#5ab4ff" strokeWidth="1.3" strokeOpacity="0.5" />
-            <rect x={x + 1.5} y={ankle - 7} width={tubeW - 3} height="5.5" rx="2" fill="#26263a" />
+            <rect x={x + 1.5} y={ankle - 7} width={tubeW - 3} height="5.5" rx="2" fill="#32324a" />
           </g>
         );
       })}
       <path
-        d={`M ${cx - half + 4} ${hipY + 2} L ${cx - 8} ${hipY + 9} M ${cx + half - 4} ${hipY + 2} L ${cx + 8} ${hipY + 9}`}
+        d={`M ${cx - half + 4} ${hipY} Q ${cx} ${hipY + 10} ${cx + half - 4} ${hipY}`}
+        fill="none"
         stroke="#5ab4ff"
         strokeWidth="1.2"
         strokeOpacity="0.45"
@@ -224,6 +236,13 @@ export function GoldTrunks({ metrics, geo }) {
       <rect x={cx - bandHalf} y={bandTop} width={bandHalf * 2} height="13" rx="4" fill="#e3bd54" stroke="#98741d" strokeWidth="1.4" />
       <line x1={cx - bandHalf + 2} y1={bandTop + 3} x2={cx + bandHalf - 2} y2={bandTop + 3} stroke="#fdf3d0" strokeWidth="1.6" strokeOpacity="0.9" />
       <line x1={cx - bandHalf + 2} y1={bandTop + 10} x2={cx + bandHalf - 2} y2={bandTop + 10} stroke="#98741d" strokeWidth="1.4" strokeOpacity="0.9" />
+      <path
+        d={`M ${cx - bandHalf + 4} ${bandBottom + 2} Q ${cx} ${bandBottom + 9} ${cx + bandHalf - 4} ${bandBottom + 2}`}
+        fill="none"
+        stroke="#3d2d4a"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
       <path
         d={`M ${cx} ${hipY + 8} L ${cx + 1.9} ${hipY + 12.2} L ${cx + 6.1} ${hipY + 12.8} L ${cx + 3.1} ${hipY + 16}
             L ${cx + 3.8} ${hipY + 20.2} L ${cx} ${hipY + 18} L ${cx - 3.8} ${hipY + 20.2} L ${cx - 3.1} ${hipY + 16}

@@ -47,11 +47,11 @@ export function Sweatbands({ metrics, geo }) {
 
 export function LiftingStraps({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const top = g.armBottomY - 17;
-  const h = 14;
+  const top = g.armBottomY - 18;
+  const h = 15;
   const w = g.armWidth + 4;
   const bot = top + h;
-  const tailW = 7;
+  const tailW = 8;
   return (
     <g>
       {/* The tail hangs off the OUTER edge of each cuff: at stage 1 the arms
@@ -66,26 +66,30 @@ export function LiftingStraps({ metrics, geo }) {
           <g key={x}>
             <path
               d={`M ${tx} ${bot - 3}
-                  C ${tx + sway} ${bot + 6} ${tx + sway * 0.4} ${bot + 11} ${tx + sway} ${bot + 19}
-                  L ${tx + tailW + sway} ${bot + 19}
-                  C ${tx + tailW + sway * 0.4} ${bot + 11} ${tx + tailW + sway} ${bot + 6} ${tx + tailW} ${bot - 3} Z`}
-              fill="#414a5c"
-              stroke="#242938"
-              strokeWidth="1.2"
+                  C ${tx + sway} ${bot + 7} ${tx + sway * 0.4} ${bot + 12} ${tx + sway} ${bot + 21}
+                  L ${tx + tailW + sway} ${bot + 21}
+                  C ${tx + tailW + sway * 0.4} ${bot + 12} ${tx + tailW + sway} ${bot + 7} ${tx + tailW} ${bot - 3} Z`}
+              fill="#5b6579"
+              stroke="#262b38"
+              strokeWidth="1.3"
               strokeLinejoin="round"
             />
             <path
-              d={`M ${tx + tailW / 2 + sway * 0.5} ${bot + 2} L ${tx + tailW / 2 + sway * 0.9} ${bot + 17}`}
-              stroke="#c8d0e0"
-              strokeWidth="0.9"
-              strokeOpacity="0.55"
-              strokeDasharray="2.4 2.2"
+              d={`M ${tx + tailW / 2 + sway * 0.5} ${bot + 2} L ${tx + tailW / 2 + sway * 0.95} ${bot + 18}`}
+              stroke="#e2e8f3"
+              strokeWidth="1"
+              strokeOpacity="0.6"
+              strokeDasharray="2.6 2.4"
             />
-            <rect x={x} y={top} width={w} height={h} rx="3.5" fill="#4a5266" stroke="#242938" strokeWidth="1.3" />
-            <path d={`M ${x} ${top + 6.5} L ${x + w} ${top + 3} L ${x + w} ${top + 7.5} L ${x} ${top + 11} Z`} fill="#5c6780" />
-            <line x1={x + 1.5} y1={top + 2.6} x2={x + w - 1.5} y2={top + 2.6} stroke="#c8d0e0" strokeWidth="0.9" strokeOpacity="0.7" strokeDasharray="2.4 2.2" />
-            <line x1={x + 1.5} y1={top + h - 2.6} x2={x + w - 1.5} y2={top + h - 2.6} stroke="#c8d0e0" strokeWidth="0.9" strokeOpacity="0.7" strokeDasharray="2.4 2.2" />
-            <rect x={x + w * 0.36} y={top - 0.5} width="5.5" height={h + 1} rx="1.5" fill="#2f3546" stroke="#1c202c" strokeWidth="0.9" />
+            <path
+              d={`M ${tx + sway * 0.92} ${bot + 17} L ${tx + tailW + sway * 0.92} ${bot + 17} L ${tx + tailW + sway} ${bot + 21} L ${tx + sway} ${bot + 21} Z`}
+              fill="#394152"
+            />
+            <rect x={x} y={top} width={w} height={h} rx="3.5" fill="#5b6579" stroke="#262b38" strokeWidth="1.3" />
+            <path d={`M ${x} ${top + 7} L ${x + w} ${top + 3.5} L ${x + w} ${top + 8.5} L ${x} ${top + 12} Z`} fill="#75819a" />
+            <line x1={x + 1.5} y1={top + 2.8} x2={x + w - 1.5} y2={top + 2.8} stroke="#e2e8f3" strokeWidth="1" strokeOpacity="0.75" strokeDasharray="2.6 2.2" />
+            <line x1={x + 1.5} y1={top + h - 2.8} x2={x + w - 1.5} y2={top + h - 2.8} stroke="#e2e8f3" strokeWidth="1" strokeOpacity="0.75" strokeDasharray="2.6 2.2" />
+            <rect x={x + w * 0.34} y={top - 0.5} width="6" height={h + 1} rx="1.5" fill="#333b4c" stroke="#1c202c" strokeWidth="0.9" />
           </g>
         );
       })}

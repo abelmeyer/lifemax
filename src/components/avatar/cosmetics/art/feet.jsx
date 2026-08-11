@@ -21,8 +21,8 @@ export function GymSocks({ metrics, geo }) {
 }
 
 // The two shoes of a pair, resolved off the leg rects. `inn` is pinned to the
-// leg's own inner edge — the legs sit 3px apart at every stage, so a shoe that
-// reached past it would fuse the pair into one blob — while `out` sits 2px
+// leg's own inner edge — the legs sit only 3px apart at every stage, so a shoe
+// that reached past it would fuse the pair into one blob — while `out` sits 2px
 // proud and `dir` flips every outward offset, so each toe points away from the
 // centerline and the stance reads as a stance rather than two blocks.
 function shoeSides(g) {
@@ -32,7 +32,7 @@ function shoeSides(g) {
   ];
 }
 
-// Five-pointed star, sized off r — the emblem on the gold pair.
+// Five-pointed star sized off r — the emblem on the gold pair.
 function star(x, y, r) {
   const k = r / 5.5;
   return `M ${x} ${y - 5.5 * k} L ${x + 1.7 * k} ${y - 1.7 * k} L ${x + 5.5 * k} ${y - 1.2 * k}
@@ -45,7 +45,7 @@ export function RunningShoes({ metrics, geo }) {
   const g = geoOr(geo, metrics);
   const collar = g.legBottomY - 16;
   const soleY = g.legBottomY + 1;
-  const ground = g.legBottomY + 11;
+  const ground = g.legBottomY + 10;
   const toe = 8;
   return (
     <g>
@@ -82,8 +82,9 @@ export function RunningShoes({ metrics, geo }) {
             stroke="#5ab4ff"
             strokeWidth="1.8"
           />
-          {/* Cushioning is the whole point of this pair: the sole is 10px of
-              foam, drawn over the upper's hem so the upper sinks into it. */}
+          {/* Cushioning is the whole point of this pair: 9px of foam drawn over
+              the upper's hem, so the upper sinks into the sole rather than
+              sitting on a stripe. */}
           <path
             d={`M ${inn} ${soleY - 4}
                 L ${out + dir * (toe - 1)} ${soleY - 4}
@@ -141,18 +142,20 @@ export function CrossTrainers({ metrics, geo }) {
             d={`M ${inn} ${collar + 6} Q ${inn} ${collar} ${inn + dir * 6} ${collar} L ${inn + dir * 7} ${soleY} L ${inn} ${soleY} Z`}
             fill="#8b93a3"
           />
-          {[0, 1, 2].map((i) => (
+          {[0, 1].map((i) => (
             <path
               key={i}
-              d={`M ${inn + dir * (8 + i * 4.5)} ${collar + 3.5} L ${inn + dir * (12 + i * 4.5)} ${collar + 9.5}
-                  M ${inn + dir * (12 + i * 4.5)} ${collar + 3.5} L ${inn + dir * (8 + i * 4.5)} ${collar + 9.5}`}
+              d={`M ${inn + dir * (7 + i * 6.5)} ${collar + 3.5} L ${inn + dir * (13.5 + i * 6.5)} ${collar + 9.5}
+                  M ${inn + dir * (13.5 + i * 6.5)} ${collar + 3.5} L ${inn + dir * (7 + i * 6.5)} ${collar + 9.5}`}
               stroke="#3b4250"
-              strokeWidth="1.2"
+              strokeWidth="1.3"
               strokeLinecap="round"
             />
           ))}
-          {/* Flat and wide: the sole is only 6px thick but flares 2px past the
-              upper on both sides, which is the whole silhouette cue here. */}
+          {/* Flat and wide: only 6px of stack, but it flares 2px past the upper
+              on both sides — that spread is the whole silhouette cue. Kept a
+              lifted grey rather than near-black, or the base disappears into
+              the dark card at thumbnail size. */}
           <path
             d={`M ${inn - dir * 1} ${soleY - 2}
                 L ${out + dir * (toe + 1)} ${soleY - 2}
@@ -161,9 +164,9 @@ export function CrossTrainers({ metrics, geo }) {
                 L ${inn + dir * 2} ${ground}
                 Q ${inn - dir * 1} ${ground} ${inn - dir * 1} ${ground - 2}
                 Z`}
-            fill="#1e1e28"
-            stroke="#0f0f16"
-            strokeWidth="1.2"
+            fill="#2c3242"
+            stroke="#5b6478"
+            strokeWidth="1.3"
           />
           <path
             d={`M ${inn - dir * 0.5} ${soleY + 0.5} L ${out + dir * (toe + 1)} ${soleY + 0.5}`}
@@ -179,16 +182,16 @@ export function CrossTrainers({ metrics, geo }) {
 
 export function WeightliftingShoes({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const collar = g.legBottomY - 19;
+  const collar = g.legBottomY - 23;
   const heelTop = g.legBottomY - 2;
-  const ground = g.legBottomY + 12;
+  const ground = g.legBottomY + 11;
   const toe = 7;
-  const strapY = g.legBottomY - 10;
+  const strapY = g.legBottomY - 13;
   return (
     <g>
       {shoeSides(g).map(({ dir, inn, out }) => (
         <g key={dir}>
-          {/* Stiff and square — barely any curve on the upper, unlike the
+          {/* Stiff and square — almost no curve on the upper, unlike the
               running pair, so the two never get confused at thumbnail size. */}
           <path
             d={`M ${inn} ${collar + 4}
@@ -206,8 +209,9 @@ export function WeightliftingShoes({ metrics, geo }) {
             d={`M ${inn} ${collar + 4} Q ${inn} ${collar} ${inn + dir * 5} ${collar} L ${inn + dir * 6} ${heelTop + 2} L ${inn} ${heelTop + 2} Z`}
             fill="#6d222c"
           />
-          {/* The raised wedge: 14px of stack under the heel tapering to 8 at
-              the toe. This is the item's one unmistakable read. */}
+          {/* The raised wedge: 13px of stack under the heel tapering to 6 at
+              the toe. This is the item's one unmistakable read, so the taper
+              runs the full depth of the sole rather than a token bevel. */}
           <path
             d={`M ${inn} ${heelTop - 2}
                 L ${out + dir * (toe - 1)} ${heelTop + 5}
@@ -251,7 +255,7 @@ export function GoldSignatureSneakers({ metrics, geo }) {
   const g = geoOr(geo, metrics);
   const collar = g.legBottomY - 29;
   const soleY = g.legBottomY + 1;
-  const ground = g.legBottomY + 12;
+  const ground = g.legBottomY + 11;
   const toe = 9;
   return (
     <g>
@@ -292,7 +296,7 @@ export function GoldSignatureSneakers({ metrics, geo }) {
               strokeOpacity="0.85"
             />
           ))}
-          <path d={star(inn + dir * (g.legWidth * 0.55), soleY - 8, 5)} fill="#fdf3d0" stroke="#8a6716" strokeWidth="0.7" />
+          <path d={star(inn + dir * (g.legWidth * 0.55), soleY - 9, 5)} fill="#fdf3d0" stroke="#8a6716" strokeWidth="0.7" />
           <path
             d={`M ${inn} ${soleY - 4}
                 L ${out + dir * (toe - 1)} ${soleY - 4}

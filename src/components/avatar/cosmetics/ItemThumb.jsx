@@ -16,6 +16,15 @@ const SLOT_VIEWBOX = {
   Display: "144 8 60 96",
 };
 
+// Per-item overrides for items whose art sits somewhere other than where
+// their slot's crop looks. The Accessory crop frames a small prop by the hip,
+// which is right for a chalk bag but cuts the vest and the medal in half.
+const ITEM_VIEWBOX = {
+  "Weighted Vest": "44 44 132 128",
+  "Championship Medal": "68 40 84 78",
+  "Gym Towel": "96 44 92 92",
+};
+
 // Ghost silhouette behind the item so on-body pieces read in context.
 function GhostBody() {
   const { cx, shoulderY, waistY, hipY, legHeight, armHeight } = METRICS;
@@ -42,7 +51,7 @@ function GhostBody() {
 }
 
 export default function ItemThumb({ item }) {
-  const viewBox = SLOT_VIEWBOX[item.category] ?? "-30 0 300 290";
+  const viewBox = ITEM_VIEWBOX[item.name] ?? SLOT_VIEWBOX[item.category] ?? "-30 0 300 290";
   const [vx, vy, vw, vh] = viewBox.split(" ").map(Number);
   return (
     <svg viewBox={viewBox} width="100%" height="100%" aria-hidden="true" style={{ display: "block" }}>

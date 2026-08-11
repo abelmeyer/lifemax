@@ -53,7 +53,71 @@ export function ChampionshipBelt({ metrics, geo }) {
   );
 }
 
-// TODO(art): Powerlifting Belt — placeholder, renders nothing until drawn.
-export function PowerliftingBelt() {
-  return null;
+export function PowerliftingBelt({ metrics, geo }) {
+  const g = geoOr(geo, metrics);
+  const { cx, waistY } = metrics;
+  const top = waistY - 4;
+  const h = 22;
+  const bot = top + h;
+  // Beefier than the tier-3 lifting belt (15px tall) but still only 4px proud
+  // of the waist, which runs 35 → 22 half-width across the stages.
+  const half = g.waistHalf + 4;
+  // A powerlifting belt is widest at the back: the edges wrap out of sight at
+  // full height and the front face dips in a couple of px, top and bottom.
+  const dip = 5.6;
+  const arc = (y, dir) => `Q ${cx} ${y + dir * dip} ${cx + dir * (half - 5)} ${y}`;
+  // Anything drawn on the belt face has to follow that same dip or it floats
+  // off the leather at the centre.
+  const band = (y, dir, inset) => `M ${cx - half + inset} ${y} Q ${cx} ${y + dir * dip} ${cx + half - inset} ${y}`;
+  const suede = "#5f4335";
+  const steel = "#5f6773";
+  const prongY = [top + h * 0.33, top + h * 0.67];
+  return (
+    <g>
+      <path
+        d={`M ${cx - half} ${top + 5}
+            Q ${cx - half} ${top} ${cx - half + 5} ${top}
+            ${arc(top, 1)}
+            Q ${cx + half} ${top} ${cx + half} ${top + 5}
+            L ${cx + half} ${bot - 5}
+            Q ${cx + half} ${bot} ${cx + half - 5} ${bot}
+            ${arc(bot, -1)}
+            Q ${cx - half} ${bot} ${cx - half} ${bot - 5} Z`}
+        fill={suede}
+        stroke="#38271f"
+        strokeWidth="1.5"
+      />
+      {/* Suede catches light as a broad matte band, never a specular line. */}
+      <path d={band(top + 4.6, 1, 4)} fill="none" stroke="#7d5b4a" strokeWidth="3.6" strokeOpacity="0.5" />
+      <path d={band(top + 3.4, 1, 3.5)} fill="none" stroke="#38271f" strokeWidth="1" strokeDasharray="3 2.4" strokeOpacity="0.85" />
+      <path d={band(bot - 3.4, -1, 3.5)} fill="none" stroke="#38271f" strokeWidth="1" strokeDasharray="3 2.4" strokeOpacity="0.85" />
+
+      {/* Strap end doubled back through its keeper, both under the buckle. */}
+      <rect x={cx - half * 0.74} y={top + 3} width={half * 0.74} height={h - 6} rx="3" fill="#6b4c3c" stroke="#38271f" strokeWidth="1" />
+      <rect x={cx - half * 0.54} y={top + 1.5} width="6" height={h - 3} rx="1.5" fill="#4b342a" stroke="#38271f" strokeWidth="1" />
+
+      {[0.7, 0.87].map((f) =>
+        prongY.map((y) => <ellipse key={`${f}-${y}`} cx={cx + half * f} cy={y} rx="1.7" ry="1.9" fill="#33231c" />),
+      )}
+
+      {/* Double prong: two pins crossing the frame into the strap. The tier-3
+          belt's single centre tongue is what this is meant to out-rank. */}
+      {prongY.map((y) => (
+        <ellipse key={y} cx={cx + 13.5} cy={y} rx="1.8" ry="2" fill="#33231c" />
+      ))}
+      <rect x={cx - 11.5} y={top + 1.2} width="23" height={h - 2.4} rx="3.5" fill="#9ba3b1" stroke={steel} strokeWidth="1.2" />
+      <rect x={cx - 6} y={top + 4.8} width="12" height={h - 9.6} rx="1.5" fill={suede} stroke={steel} strokeWidth="0.9" />
+      <line x1={cx - 8.5} y1={top + 3} x2={cx + 8.5} y2={top + 3} stroke="#e8ecf3" strokeWidth="1.1" strokeOpacity="0.8" />
+      {prongY.map((y) => (
+        <path
+          key={y}
+          d={`M ${cx - 6.5} ${y - 1.3} L ${cx + 12} ${y - 1.3} L ${cx + 15} ${y} L ${cx + 12} ${y + 1.3} L ${cx - 6.5} ${y + 1.3} Z`}
+          fill="#e8ecf3"
+          stroke={steel}
+          strokeWidth="0.6"
+          strokeLinejoin="round"
+        />
+      ))}
+    </g>
+  );
 }

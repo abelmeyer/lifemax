@@ -12,8 +12,12 @@ const TIER_LABELS = {
   10: "Exclusive",
 };
 
+// Equip-slot order, so the filter reads head-to-toe rather than alphabetically.
+const SLOT_ORDER = ["Head", "Top", "Bottom", "Feet", "Waist", "Wrists", "Legs", "Accessory", "Aura", "Display"];
+
 export default function Store() {
   const { user } = useAuth();
+  const [slotFilter, setSlotFilter] = useState(null);
   const [economy, setEconomy] = useState(null);
   const [items, setItems] = useState([]);
   const [ownedById, setOwnedById] = useState({});
@@ -111,11 +115,17 @@ export default function Store() {
   }
 
   const tiers = [1, 3, 5, 10];
-  const grouped = tiers.map((tier) => ({
-    tier,
-    label: TIER_LABELS[tier],
-    items: items.filter((i) => i.required_prestige === tier),
-  }));
+  // Slots present in the catalog, in head-to-toe order — driven by the data so
+  // a slot added in Supabase shows up without a code change.
+  const slots = SLOT_ORDER.filter((slot) => items.some((i) => i.category === slot));
+  const visible = slotFilter ? items.filter((i) => i.category === slotFilter) : items;
+  const grouped = tiers
+    .map((tier) => ({
+      tier,
+      label: TIER_LABELS[tier],
+      items: visible.filter((i) => i.required_prestige === tier),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <>
@@ -152,6 +162,27 @@ export default function Store() {
           {error}
         </div>
       )}
+
+      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1">
+        {[null, ...slots].map((slot) => {
+          const active = slotFilter === slot;
+          return (
+            <button
+              key={slot ?? "all"}
+              type="button"
+              onClick={() => setSlotFilter(slot)}
+              className="shrink-0 rounded-pill border px-3 py-1.5 text-[12px] font-medium transition-colors duration-200 active:scale-95"
+              style={{
+                color: active ? "#0d0d12" : "#6e7a8a",
+                background: active ? "#5ab4ff" : "transparent",
+                borderColor: active ? "#5ab4ff" : "rgba(255,255,255,0.07)",
+              }}
+            >
+              {slot ?? "All"}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex flex-col gap-6">
         {grouped.map(({ tier, label, items: tierItems }) => {

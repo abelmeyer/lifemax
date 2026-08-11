@@ -85,6 +85,9 @@ const STORE_DESCRIPTIONS = {
   "Chalk Bag": "Keep your grip locked in.",
 };
 
+const STORE_ROW_SAMPLES = ["Gym Socks", "Lifting Belt", "Golden Championship Belt", "Wrist Wraps", "Chalk Bag"]
+  .map((n) => SAMPLE_ITEMS.find((i) => i.name === n));
+
 const SAMPLE_STREAKS = {
   pushups: { current_streak: 5 },
   situps: { current_streak: 5 },
@@ -521,8 +524,8 @@ export default function DevPreview() {
             <StoreItemRow
               key={state}
               item={{
-                ...SAMPLE_ITEMS[i + 4],
-                description: STORE_DESCRIPTIONS[SAMPLE_ITEMS[i + 4].name],
+                ...STORE_ROW_SAMPLES[i],
+                description: STORE_DESCRIPTIONS[STORE_ROW_SAMPLES[i].name],
                 cost_aura: 250,
               }}
               {...props}

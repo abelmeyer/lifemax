@@ -37,8 +37,15 @@ export default function DayDetail({ detail }) {
   const totals = sumMacros(meals);
   const gratitudeItems = normalizeItems(gratitude?.items).filter((t) => t.trim());
   const earnedBadges = (badges ?? []).map((b) => ACHIEVEMENTS_BY_ID[b.achievement_id]).filter(Boolean);
+  // Mirrors exactly what the cards below render — a day whose only record is an
+  // earned badge still has something on it.
   const hasAnything =
-    exerciseGroups.length > 0 || cardio.length > 0 || habitLog || meals.length > 0 || gratitudeItems.length > 0;
+    exerciseGroups.length > 0 ||
+    cardio.length > 0 ||
+    habitLog ||
+    meals.length > 0 ||
+    gratitudeItems.length > 0 ||
+    earnedBadges.length > 0;
 
   const statusColor = STATUS_COLORS[status] ?? "#6e7a8a";
 

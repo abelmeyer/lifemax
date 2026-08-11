@@ -20,6 +20,8 @@ export default function MonthModal({ userId, initialDate = null, onClose }) {
   const [summary, setSummary] = useState(null);
   const [exercisesById, setExercisesById] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [selectedDate, setSelectedDate] = useState(initialDate);
 
   const today = todayStr();
@@ -34,21 +36,41 @@ export default function MonthModal({ userId, initialDate = null, onClose }) {
     });
   }, []);
 
-  // Changing month clears the drill-down, but the first load must keep the
-  // day the caller asked to open on.
-  const didMount = useRef(false);
+  // Changing month clears the drill-down, but the first load must keep the day
+  // the caller asked to open on. Tracked as "which month the selection belongs
+  // to" rather than "is this the first run": StrictMode double-invokes this
+  // effect on mount, and a first-run flag reads the second invocation as a
+  // month change and throws away initialDate.
+  const selectionMonthRef = useRef(`${viewedYear}-${viewedMonth}`);
   useEffect(() => {
+    const monthKey = `${viewedYear}-${viewedMonth}`;
+    if (selectionMonthRef.current !== monthKey) {
+      selectionMonthRef.current = monthKey;
+      setSelectedDate(null);
+    }
     setLoading(true);
-    if (didMount.current) setSelectedDate(null);
-    didMount.current = true;
+    setLoadFailed(false);
     const inMonthCells = grid.filter((c) => c.inMonth);
     const start = inMonthCells[0].dateStr;
     const end = inMonthCells[inMonthCells.length - 1].dateStr;
-    fetchRangeSummary(userId, start, end).then((data) => {
-      setSummary(data);
-      setLoading(false);
-    });
-  }, [userId, viewedYear, viewedMonth, grid]);
+    // Fast month-switching can land these out of order, so only the fetch the
+    // modal is still showing is allowed to paint.
+    let current = true;
+    fetchRangeSummary(userId, start, end)
+      .then((data) => {
+        if (!current) return;
+        setSummary(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!current) return;
+        setLoadFailed(true);
+        setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [userId, viewedYear, viewedMonth, grid, reloadToken]);
 
   function goPrevMonth() {
     if (viewedMonth === 0) {
@@ -153,6 +175,21 @@ export default function MonthModal({ userId, initialDate = null, onClose }) {
           {loading ? (
             <div className="flex justify-center py-10">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
+            </div>
+          ) : loadFailed ? (
+            <div
+              className="flex items-center justify-between gap-3 rounded-card border px-4 py-3 text-[13px]"
+              style={{ borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)", color: "#f87171" }}
+            >
+              <span className="leading-relaxed">Couldn't load this month.</span>
+              <button
+                type="button"
+                onClick={() => setReloadToken((t) => t + 1)}
+                className="shrink-0 rounded-btn border px-2.5 py-1.5 text-[12px] font-medium transition-colors duration-200 hover:bg-white/[0.04]"
+                style={{ borderColor: "rgba(248,113,113,0.3)" }}
+              >
+                Retry
+              </button>
             </div>
           ) : dayDetail ? (
             <DayDetail detail={dayDetail} />

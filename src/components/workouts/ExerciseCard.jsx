@@ -14,6 +14,7 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
   const [reps, setReps] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [historyFailed, setHistoryFailed] = useState(false);
   const [justHitPR, setJustHitPR] = useState(false);
   const [justLoggedId, setJustLoggedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -23,20 +24,27 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
   const restTimer = useRestTimer();
   const restSeconds = restSecondsFor(exercise);
 
+  async function loadHistory() {
+    setLoading(true);
+    setError("");
+    setHistoryFailed(false);
+    try {
+      const sets = await fetchExerciseHistory(exercise.id);
+      setHistory(summarizeHistory(sets, todayStr()));
+    } catch {
+      // Logging is blocked until this succeeds. Without today's sets the next
+      // set_number restarts at 1 and collides with rows already stored, and a
+      // bestWeight of 0 makes any weight at all look like a PR.
+      setHistoryFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function toggleExpand() {
     const next = !expanded;
     setExpanded(next);
-    if (next && !history) {
-      setLoading(true);
-      try {
-        const sets = await fetchExerciseHistory(exercise.id);
-        setHistory(summarizeHistory(sets, todayStr()));
-      } catch {
-        setError("Couldn't load history");
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (next && !history) await loadHistory();
   }
 
   async function handleLogSet(e) {
@@ -103,10 +111,11 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
   async function handleSaveEdit(e) {
     e.preventDefault();
     if (!editWeight || !editReps) return;
+    const savingId = editingId;
     setSaving(true);
     setError("");
     try {
-      const updated = await updateSet(editingId, {
+      const updated = await updateSet(savingId, {
         weightLbs: parseFloat(editWeight),
         reps: parseInt(editReps, 10),
       });
@@ -120,7 +129,9 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
           bestWeight: Math.max(h?.pastBestWeight ?? 0, ...todaysSets.map((s) => s.weight_lbs ?? 0), 0),
         };
       });
-      setEditingId(null);
+      // Only the editor this save belongs to closes — the user may have opened
+      // a different set while the write was in flight.
+      setEditingId((cur) => (cur === savingId ? null : cur));
       onSetsChanged?.();
     } catch {
       setError("Couldn't update set");
@@ -142,7 +153,7 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
           bestWeight: Math.max(h?.pastBestWeight ?? 0, ...todaysSets.map((s) => s.weight_lbs ?? 0), 0),
         };
       });
-      setEditingId(null);
+      setEditingId((cur) => (cur === setId ? null : cur));
       onSetsChanged?.();
     } catch {
       setError("Couldn't delete set");
@@ -180,6 +191,15 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
             <div className="flex justify-center py-4">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-accent" />
             </div>
+          ) : historyFailed ? (
+            <button
+              type="button"
+              onClick={loadHistory}
+              className="w-full rounded-btn border py-2.5 text-[13px] font-medium transition duration-200 active:scale-[0.99]"
+              style={{ borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}
+            >
+              Couldn't load history — tap to retry
+            </button>
           ) : (
             <>
               {history?.lastBest && (

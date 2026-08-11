@@ -39,14 +39,19 @@ export async function fetchGratitude(userId, date) {
   return { entry: data, tableMissing: false };
 }
 
+// A null startDate means "everything up to endDate". A streak has no upper
+// bound, so reading it out of a fixed window silently caps it — a 40-day
+// streak seen through 30 days of history reads as 30 and then stops growing.
+// The rows are three short strings each, so the whole history is cheap.
 export async function fetchGratitudeRange(userId, startDate, endDate) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("gratitude_entries")
     .select("*")
     .eq("user_id", userId)
-    .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: false });
+  if (startDate) query = query.gte("date", startDate);
+  const { data, error } = await query;
   if (error) {
     if (isMissingTable(error)) return { entries: [], tableMissing: true };
     throw error;

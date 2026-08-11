@@ -285,8 +285,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW}
             height={sleeveH}
             rx={g.armWidth / 2 + 1}
-            fill="#1e1e2a"
-            stroke="#4a4a64"
+            fill="#232330"
+            stroke="#4d4d68"
             strokeWidth="1.4"
           />
           <line
@@ -304,7 +304,7 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW - 1.2}
             height="7"
             rx="3"
-            fill="#2a2a3a"
+            fill="#2e2e40"
             stroke="#5ab4ff"
             strokeWidth="1.2"
             strokeOpacity="0.8"
@@ -320,8 +320,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             L ${cx - hemOut} ${hemY}
             Q ${cx - sideCtrl} ${midY} ${cx - shoulderOut} ${topY}
             Z`}
-        fill="#1e1e2a"
-        stroke="#4a4a64"
+        fill="#232330"
+        stroke="#4d4d68"
         strokeWidth="1.4"
       />
       {/* raglan seams and panel lines are the whole read on a black garment —
@@ -361,6 +361,14 @@ export function CompressionLongSleeve({ metrics, geo }) {
         strokeWidth="1.8"
         strokeOpacity="0.85"
       />
+      <path
+        d={`M ${cx - shoulderOut * 0.62} ${shoulderY + 6} Q ${cx - shoulderOut * 0.78} ${midY} ${cx - hemOut * 0.6} ${hemY - 6}`}
+        fill="none"
+        stroke="#3f3f58"
+        strokeWidth="5"
+        strokeOpacity="0.55"
+        strokeLinecap="round"
+      />
       <rect x={cx - hemOut + 1} y={hemY - 5} width={(hemOut - 1) * 2} height="4.5" fill="#5ab4ff" fillOpacity="0.16" />
     </g>
   );
@@ -381,7 +389,7 @@ export function TeamWindbreaker({ metrics, geo }) {
   const neckHalf = 13;
   const sleeveW = g.armWidth + 6;
   const sleeveTop = g.armTopY - 6;
-  const sleeveBot = g.armBottomY - 1;
+  const sleeveBot = g.armBottomY + 1;
   const stripeY = shoulderY + 26;
   return (
     <g>
@@ -392,7 +400,7 @@ export function TeamWindbreaker({ metrics, geo }) {
             y={sleeveTop}
             width={sleeveW}
             height={sleeveBot - sleeveTop}
-            rx={g.armWidth / 2 + 2}
+            rx={g.armWidth / 2 + 1}
             fill="#2a4661"
             stroke="#16283a"
             strokeWidth="1.4"

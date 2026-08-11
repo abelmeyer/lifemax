@@ -34,15 +34,46 @@ const SAMPLE_ITEMS = [
   { id: "i1", name: "Classic Tank Top", category: "Top" },
   { id: "i2", name: "Pro Singlet", category: "Top" },
   { id: "i3", name: "Signature Hoodie", category: "Top" },
+  { id: "i3a", name: "Cutoff Tee", category: "Top" },
+  { id: "i3b", name: "Compression Long Sleeve", category: "Top" },
+  { id: "i3c", name: "Team Windbreaker", category: "Top" },
   { id: "i4", name: "Training Shorts", category: "Bottom" },
+  { id: "i4a", name: "Mesh Shorts", category: "Bottom" },
+  { id: "i4b", name: "Compression Tights", category: "Bottom" },
+  { id: "i4c", name: "Gold Trunks", category: "Bottom" },
   { id: "i5", name: "Gym Socks", category: "Feet" },
+  { id: "i5a", name: "Running Shoes", category: "Feet" },
+  { id: "i5b", name: "Cross-Trainers", category: "Feet" },
+  { id: "i5c", name: "Weightlifting Shoes", category: "Feet" },
+  { id: "i5d", name: "Gold Signature Sneakers", category: "Feet" },
   { id: "i6", name: "Lifting Belt", category: "Waist" },
   { id: "i7", name: "Golden Championship Belt", category: "Waist" },
+  { id: "i7a", name: "Powerlifting Belt", category: "Waist" },
   { id: "i8", name: "Wrist Wraps", category: "Wrists" },
-  { id: "i9", name: "Chalk Bag", category: "Accessory" },
+  { id: "i8a", name: "Sweatbands", category: "Wrists" },
+  { id: "i8b", name: "Lifting Straps", category: "Wrists" },
+  { id: "i8c", name: "Fitness Watch", category: "Wrists" },
   { id: "i10", name: "Carbon Knee Sleeves", category: "Legs" },
+  { id: "i10a", name: "Compression Sleeves", category: "Legs" },
+  { id: "i10b", name: "Titanium Knee Wraps", category: "Legs" },
+  { id: "ih1", name: "Sweat Headband", category: "Head" },
+  { id: "ih2", name: "Knit Beanie", category: "Head" },
+  { id: "ih3", name: "Snapback Cap", category: "Head" },
+  { id: "ih4", name: "Boxing Headgear", category: "Head" },
+  { id: "ih5", name: "Champion's Crown", category: "Head" },
+  { id: "i9", name: "Chalk Bag", category: "Accessory" },
+  { id: "i9a", name: "Gym Towel", category: "Accessory" },
+  { id: "i9b", name: "Water Bottle", category: "Accessory" },
+  { id: "i9c", name: "Weighted Vest", category: "Accessory" },
+  { id: "i9d", name: "Championship Medal", category: "Accessory" },
   { id: "i11", name: "Diamond Avatar Aura", category: "Aura" },
+  { id: "i11a", name: "Ember Aura", category: "Aura" },
+  { id: "i11b", name: "Emerald Aura", category: "Aura" },
+  { id: "i11c", name: "Void Aura", category: "Aura" },
   { id: "i12", name: "Legacy Trophy Case", category: "Display" },
+  { id: "i12a", name: "Medal Rack", category: "Display" },
+  { id: "i12b", name: "PR Board", category: "Display" },
+  { id: "i12c", name: "Hall of Fame Plaque", category: "Display" },
 ];
 
 // Descriptions as seeded in sprint6_migration.sql.
@@ -53,6 +84,9 @@ const STORE_DESCRIPTIONS = {
   "Wrist Wraps": "Support for max-effort presses.",
   "Chalk Bag": "Keep your grip locked in.",
 };
+
+const STORE_ROW_SAMPLES = ["Gym Socks", "Lifting Belt", "Golden Championship Belt", "Wrist Wraps", "Chalk Bag"]
+  .map((n) => SAMPLE_ITEMS.find((i) => i.name === n));
 
 const SAMPLE_STREAKS = {
   pushups: { current_streak: 5 },
@@ -490,8 +524,8 @@ export default function DevPreview() {
             <StoreItemRow
               key={state}
               item={{
-                ...SAMPLE_ITEMS[i + 4],
-                description: STORE_DESCRIPTIONS[SAMPLE_ITEMS[i + 4].name],
+                ...STORE_ROW_SAMPLES[i],
+                description: STORE_DESCRIPTIONS[STORE_ROW_SAMPLES[i].name],
                 cost_aura: 250,
               }}
               {...props}

@@ -8,10 +8,10 @@ import AccessoryCosmetic from "./AccessoryCosmetic";
 import AuraCosmetic from "./AuraCosmetic";
 import DisplayCosmetic from "./DisplayCosmetic";
 
-// Keyed by store_items.category (the equip slot). Each renderer is a
-// placeholder today — Sprint 7 swaps the body of each one for a real
-// <image href={item.asset_path}> once art exists, without touching this
-// lookup or anything that calls StoreCosmeticLayer.
+// Keyed by store_items.category (the equip slot). These are the generic
+// per-slot FALLBACKS: StoreCosmeticLayer looks an item up in itemArt.jsx by
+// name first and only lands here for catalog rows that don't have bespoke art
+// yet, so new store items always render something recognizable.
 export const COSMETIC_RENDERERS = {
   Top: TopCosmetic,
   Bottom: BottomCosmetic,

@@ -2,6 +2,7 @@ import Avatar, { METRICS } from "../components/avatar/Avatar";
 import AvatarBody from "../components/avatar/AvatarBody";
 import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
 import AvatarSetup from "./AvatarSetup";
+import Settings from "./Settings";
 import { AuthContext } from "../lib/AuthContext";
 import { CustomizationContext } from "../lib/CustomizationContext";
 import {
@@ -52,6 +53,32 @@ export function DevSetupPreview({ mode = "setup" }) {
     <AuthContext.Provider value={auth}>
       <CustomizationContext.Provider value={custom}>
         <AvatarSetup mode={mode} />
+      </CustomizationContext.Provider>
+    </AuthContext.Provider>
+  );
+}
+
+// Same stub-context trick for the Settings screen. Its habit-settings fetch
+// hits the (stubbed) network and surfaces an error banner here — expected in
+// the harness, not a defect in the screen.
+export function DevSettingsPreview() {
+  const auth = {
+    user: { id: "dev-preview", email: "you@example.com" },
+    loading: false,
+    signOut: async () => {},
+  };
+  const custom = {
+    loading: false,
+    customization: { skin_tone: "bronze", hair_style: "curly", hair_color: "black", facial_hair: "beard" },
+    needsSetup: false,
+    save: async (v) => v,
+  };
+  return (
+    <AuthContext.Provider value={auth}>
+      <CustomizationContext.Provider value={custom}>
+        <div className="mx-auto max-w-md px-4 py-8">
+          <Settings />
+        </div>
       </CustomizationContext.Provider>
     </AuthContext.Provider>
   );

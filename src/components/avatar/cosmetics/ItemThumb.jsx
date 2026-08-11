@@ -42,8 +42,12 @@ function GhostBody() {
 
 export default function ItemThumb({ item }) {
   const viewBox = SLOT_VIEWBOX[item.category] ?? "-30 0 300 290";
+  const [vx, vy, vw, vh] = viewBox.split(" ").map(Number);
   return (
     <svg viewBox={viewBox} width="100%" height="100%" aria-hidden="true" style={{ display: "block" }}>
+      {/* Lifted backdrop so near-black garments (hoodie, shorts) still read
+          against the dark card surface. */}
+      <rect x={vx} y={vy} width={vw} height={vh} fill="#22222c" />
       <GhostBody />
       <StoreCosmeticLayer item={item} metrics={METRICS} />
     </svg>

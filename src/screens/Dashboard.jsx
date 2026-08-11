@@ -4,7 +4,7 @@ import ScreenHeader from "../components/ScreenHeader";
 import Avatar from "../components/avatar/Avatar";
 import MacroBar from "../components/MacroBar";
 import WeekStrip from "../components/calendar/WeekStrip";
-import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon, PencilIcon } from "../components/icons";
+import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon, PencilIcon, SettingsIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { useCustomization } from "../lib/CustomizationContext";
 import { syncAvatarProgress } from "../lib/avatar";
@@ -103,10 +103,19 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle="Your daily overview at a glance."
         right={
-          <p className="font-mono text-[11px] text-muted">
-            {now.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
-            {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-          </p>
+          <div className="flex items-center gap-2.5">
+            <p className="font-mono text-[11px] text-muted">
+              {now.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
+              {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+            </p>
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-muted transition-colors duration-200 hover:text-body active:scale-95"
+            >
+              <SettingsIcon width={15} height={15} />
+            </Link>
+          </div>
         }
       />
 

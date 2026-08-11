@@ -10,7 +10,8 @@ import Nutrition from "./screens/Nutrition";
 import Photos from "./screens/Photos";
 import Store from "./screens/Store";
 import AvatarSetup from "./screens/AvatarSetup";
-import DevPreview, { DevSetupPreview } from "./screens/DevPreview";
+import Settings from "./screens/Settings";
+import DevPreview, { DevSetupPreview, DevSettingsPreview } from "./screens/DevPreview";
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function AppRoutes() {
       />
       {import.meta.env.DEV && <Route path="/preview" element={<DevPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/setup" element={<DevSetupPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/settings" element={<DevSettingsPreview />} />}
       <Route
         path="/"
         element={
@@ -77,6 +79,7 @@ function AppRoutes() {
         <Route path="photos" element={<Photos />} />
         <Route path="store" element={<Store />} />
         <Route path="avatar" element={<AvatarSetup mode="edit" />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   );

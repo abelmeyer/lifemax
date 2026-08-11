@@ -7,6 +7,9 @@ import WeekStrip from "../components/calendar/WeekStrip";
 import { TrophyIcon, PhotosIcon, BoltIcon, StarIcon, PencilIcon, SettingsIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { useCustomization } from "../lib/CustomizationContext";
+import { useAccomplishments } from "../lib/AccomplishmentsContext";
+import { syncAccomplishments } from "../lib/accomplishments";
+import { fetchGratitude, countFilled } from "../lib/gratitude";
 import { syncAvatarProgress } from "../lib/avatar";
 import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
@@ -17,6 +20,8 @@ import { fetchPhotos, getSignedUrls } from "../lib/photos";
 export default function Dashboard() {
   const { user } = useAuth();
   const { customization } = useCustomization();
+  const { celebrate } = useAccomplishments();
+  const [gratitudeFilled, setGratitudeFilled] = useState(0);
   const [avatarState, setAvatarState] = useState(null);
   const [habitStreaks, setHabitStreaks] = useState({});
   const [justLeveledUp, setJustLeveledUp] = useState(false);
@@ -78,11 +83,32 @@ export default function Dashboard() {
       }
 
       setLoading(false);
+
+      // Non-blocking: the dashboard is already usable, and a badge that pops
+      // a beat later is fine — a slow achievement scan holding up the whole
+      // screen would not be.
+      fetchGratitude(user.id, todayStr())
+        .then(({ entry }) => {
+          if (mounted) setGratitudeFilled(countFilled(entry?.items));
+        })
+        .catch(() => {});
+
+      syncAccomplishments(user.id, {
+        avatarState: avatarResult.avatarState,
+        economy: economyResult.economy,
+        habitStreaks: avatarResult.habitStreaks,
+      })
+        .then((r) => {
+          if (mounted) celebrate(r.newlyEarned);
+        })
+        .catch(() => {});
     })();
     return () => {
       mounted = false;
     };
-  }, [user.id]);
+    // celebrate is stable (useCallback with no deps) — listed to satisfy the
+    // exhaustive-deps rule without causing a refetch loop.
+  }, [user.id, celebrate]);
 
   if (loading) {
     return (
@@ -238,6 +264,33 @@ export default function Dashboard() {
           Leveled up — now level {avatarState.level}
         </div>
       )}
+
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <Link
+          to="/gratitude"
+          className="card-shadow flex flex-col gap-1 rounded-card border bg-surface px-4 py-3.5 transition-colors duration-200 hover:bg-white/[0.03]"
+          style={{ borderColor: gratitudeFilled >= 3 ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.07)" }}
+        >
+          <span className="text-[12px] text-muted">Gratitude</span>
+          <span
+            className="font-mono text-[15px] font-semibold"
+            style={{ color: gratitudeFilled >= 3 ? "#34d399" : "#e8eaf0" }}
+          >
+            {gratitudeFilled >= 3 ? "Done ✓" : `${gratitudeFilled}/3 today`}
+          </span>
+        </Link>
+
+        <Link
+          to="/accomplishments"
+          className="card-shadow flex flex-col gap-1 rounded-card border border-border bg-surface px-4 py-3.5 transition-colors duration-200 hover:bg-white/[0.03]"
+        >
+          <span className="text-[12px] text-muted">Accomplishments</span>
+          <span className="flex items-center gap-1.5 font-mono text-[15px] font-semibold text-body">
+            <TrophyIcon width={14} height={14} style={{ color: "#e3bd54" }} />
+            Badges
+          </span>
+        </Link>
+      </div>
 
       <WeekStrip userId={user.id} />
 

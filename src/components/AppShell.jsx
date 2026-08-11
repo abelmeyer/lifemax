@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import TabBar from "./TabBar";
+import RestTimerBar from "./workouts/RestTimerBar";
 
 export default function AppShell() {
   return (
@@ -10,6 +11,7 @@ export default function AppShell() {
       >
         <Outlet />
       </main>
+      <RestTimerBar />
       <TabBar />
     </div>
   );

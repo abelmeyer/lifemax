@@ -1,4 +1,15 @@
+import { useEffect } from "react";
 import Avatar, { METRICS } from "../components/avatar/Avatar";
+import AchievementBadge from "../components/accomplishments/AchievementBadge";
+import AchievementToast from "../components/accomplishments/AchievementToast";
+import WorkoutSessionCard from "../components/workouts/WorkoutSessionCard";
+import RestTimerBar from "../components/workouts/RestTimerBar";
+import { RestTimerProvider, useRestTimer } from "../lib/RestTimerContext";
+import { ACHIEVEMENTS, CATEGORIES } from "../lib/accomplishments";
+import DayDetail from "../components/calendar/DayDetail";
+import Gratitude from "./Gratitude";
+import Accomplishments from "./Accomplishments";
+import { AccomplishmentsProvider } from "../lib/AccomplishmentsContext";
 import AvatarBody from "../components/avatar/AvatarBody";
 import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
 import StoreItemRow from "../components/store/StoreItemRow";
@@ -90,6 +101,178 @@ export function DevSettingsPreview() {
           <Settings />
         </div>
       </CustomizationContext.Provider>
+    </AuthContext.Provider>
+  );
+}
+
+// Achievement badges + the unlock toast, rendered statically so the whole
+// catalog can be eyeballed at once.
+export function DevBadgesPreview() {
+  const sample = ACHIEVEMENTS[0];
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <h1 className="mb-6 text-[24px] font-semibold text-body">Accomplishments preview (dev only)</h1>
+
+      <Section title="Unlock toast">
+        <div className="relative" style={{ height: 110 }}>
+          <AchievementToast achievement={sample} onDismiss={() => {}} />
+        </div>
+      </Section>
+
+      <Section title="Every badge — earned">
+        <div className="flex flex-wrap gap-2">
+          {ACHIEVEMENTS.map((a) => (
+            <Cell key={a.id} label={`${a.name} · ${a.tier}`} width={104}>
+              <AchievementBadge achievement={a} size={54} />
+            </Cell>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Locked state (one per category)">
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => {
+            const a = ACHIEVEMENTS.find((x) => x.category === c);
+            return a ? (
+              <Cell key={c} label={`${c} · locked`} width={104}>
+                <AchievementBadge achievement={a} earned={false} size={54} />
+              </Cell>
+            ) : null;
+          })}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+// The rest timer bar in its three states, and the workout session card.
+export function DevWorkoutPreview() {
+  const now = Date.now();
+  const sessionSets = [
+    { id: 1, created_at: new Date(now - 42 * 60000).toISOString(), weight_lbs: 135, reps: 10 },
+    { id: 2, created_at: new Date(now - 34 * 60000).toISOString(), weight_lbs: 155, reps: 8 },
+    { id: 3, created_at: new Date(now - 21 * 60000).toISOString(), weight_lbs: 175, reps: 6 },
+    { id: 4, created_at: new Date(now - 3 * 60000).toISOString(), weight_lbs: 185, reps: 5 },
+  ];
+  const finishedSets = sessionSets.map((s, i) => ({
+    ...s,
+    created_at: new Date(now - (300 - i * 15) * 60000).toISOString(),
+  }));
+
+  return (
+    <div className="mx-auto max-w-md px-6 py-8">
+      <h1 className="mb-6 text-[24px] font-semibold text-body">Workout session preview (dev only)</h1>
+
+      <Section title="Session in progress">
+        <WorkoutSessionCard sets={sessionSets} />
+      </Section>
+
+      <Section title="Session finished (idle)">
+        <WorkoutSessionCard sets={finishedSets} />
+      </Section>
+
+      <Section title="Rest timer — running">
+        <RestTimerProvider>
+          <RestTimerHarness seconds={95} />
+        </RestTimerProvider>
+      </Section>
+
+      <Section title="Rest timer — finished">
+        <RestTimerProvider>
+          <RestTimerHarness seconds={0} />
+        </RestTimerProvider>
+      </Section>
+    </div>
+  );
+}
+
+// Starts a timer on mount so RestTimerBar has something to render. The bar is
+// fixed-position in the real app; a transformed wrapper becomes the
+// containing block for fixed descendants, which pins it inline here so both
+// states can be seen at once instead of stacking on top of each other.
+function RestTimerHarness({ seconds }) {
+  const { start } = useRestTimer();
+  useEffect(() => {
+    start(seconds, "Rest · Barbell Squat");
+  }, [start, seconds]);
+  return (
+    <div style={{ transform: "translateZ(0)", position: "relative", height: 96 }}>
+      <RestTimerBar />
+    </div>
+  );
+}
+
+// DayDetail is pure props, so it can be exercised with a fabricated day —
+// the richest one the calendar can produce.
+export function DevDayDetailPreview() {
+  const base = Date.parse("2026-08-09T07:12:00");
+  const detail = {
+    date: "2026-08-09",
+    status: "full",
+    exerciseGroups: [
+      {
+        name: "Barbell Bench Press",
+        sets: [
+          { id: "a", weight_lbs: 135, reps: 12 },
+          { id: "b", weight_lbs: 155, reps: 10 },
+          { id: "c", weight_lbs: 175, reps: 8 },
+        ],
+      },
+      {
+        name: "Incline Dumbbell Press",
+        sets: [
+          { id: "d", weight_lbs: 55, reps: 12 },
+          { id: "e", weight_lbs: 60, reps: 10 },
+        ],
+      },
+    ],
+    session: {
+      hasSession: true,
+      startMs: base,
+      lastSetMs: base + 52 * 60000,
+      durationSeconds: 52 * 60,
+      setCount: 5,
+      totalVolume: 6420,
+    },
+    cardio: [{ id: "c1", type: "Swim", duration_min: 30 }],
+    habitLog: { pushups: 140, situps: 210, pullups: 12 },
+    pullupTarget: 10,
+    meals: [
+      { id: "m1", protein_g: 62, carbs_g: 70, fat_g: 18, calories: 690 },
+      { id: "m2", protein_g: 55, carbs_g: 85, fat_g: 22, calories: 760 },
+    ],
+    gratitude: {
+      items: [
+        "Training partner spotted me on the last set.",
+        "Shoulder held up through all three pressing movements.",
+        "Coffee with my sister ran two hours long.",
+      ],
+    },
+    badges: [{ achievement_id: "first_pr" }, { achievement_id: "volume_10k" }],
+  };
+
+  return (
+    <div className="mx-auto max-w-md px-6 py-8">
+      <h1 className="mb-6 text-[24px] font-semibold text-body">Day detail preview (dev only)</h1>
+      <DayDetail detail={detail} />
+    </div>
+  );
+}
+
+// Gratitude and Accomplishments against stub auth. Their Supabase reads fail
+// in the harness (stub URL), which is exactly the empty/error path — enough
+// to verify layout without a database.
+export function DevJournalPreview() {
+  const auth = { user: { id: "dev-preview", email: "you@example.com" }, loading: false, signOut: async () => {} };
+  return (
+    <AuthContext.Provider value={auth}>
+      <AccomplishmentsProvider>
+        <div className="mx-auto max-w-md px-6 py-8">
+          <Gratitude />
+          <div className="my-10 border-t border-border" />
+          <Accomplishments />
+        </div>
+      </AccomplishmentsProvider>
     </AuthContext.Provider>
   );
 }

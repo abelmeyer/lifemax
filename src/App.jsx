@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { CustomizationProvider, useCustomization } from "./lib/CustomizationContext";
+import { RestTimerProvider } from "./lib/RestTimerContext";
+import { AccomplishmentsProvider } from "./lib/AccomplishmentsContext";
 import AppShell from "./components/AppShell";
 import Login from "./screens/Login";
 import Dashboard from "./screens/Dashboard";
@@ -11,7 +13,16 @@ import Photos from "./screens/Photos";
 import Store from "./screens/Store";
 import AvatarSetup from "./screens/AvatarSetup";
 import Settings from "./screens/Settings";
-import DevPreview, { DevSetupPreview, DevSettingsPreview } from "./screens/DevPreview";
+import Accomplishments from "./screens/Accomplishments";
+import Gratitude from "./screens/Gratitude";
+import DevPreview, {
+  DevSetupPreview,
+  DevSettingsPreview,
+  DevBadgesPreview,
+  DevWorkoutPreview,
+  DevDayDetailPreview,
+  DevJournalPreview,
+} from "./screens/DevPreview";
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -60,13 +71,21 @@ function AppRoutes() {
       {import.meta.env.DEV && <Route path="/preview" element={<DevPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/setup" element={<DevSetupPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/settings" element={<DevSettingsPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/badges" element={<DevBadgesPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/workout" element={<DevWorkoutPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/day" element={<DevDayDetailPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/journal" element={<DevJournalPreview />} />}
       <Route
         path="/"
         element={
           <RequireAuth>
             <CustomizationProvider>
               <SetupGate>
-                <AppShell />
+                <RestTimerProvider>
+                  <AccomplishmentsProvider>
+                    <AppShell />
+                  </AccomplishmentsProvider>
+                </RestTimerProvider>
               </SetupGate>
             </CustomizationProvider>
           </RequireAuth>
@@ -80,6 +99,8 @@ function AppRoutes() {
         <Route path="store" element={<Store />} />
         <Route path="avatar" element={<AvatarSetup mode="edit" />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="accomplishments" element={<Accomplishments />} />
+        <Route path="gratitude" element={<Gratitude />} />
       </Route>
     </Routes>
   );

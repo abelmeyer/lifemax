@@ -285,8 +285,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW}
             height={sleeveH}
             rx={g.armWidth / 2 + 1}
-            fill="#232330"
-            stroke="#4d4d68"
+            fill="#2a2a38"
+            stroke="#5c6a94"
             strokeWidth="1.4"
           />
           <line
@@ -296,7 +296,7 @@ export function CompressionLongSleeve({ metrics, geo }) {
             y2={sleeveTop + sleeveH - 12}
             stroke="#5ab4ff"
             strokeWidth="1.2"
-            strokeOpacity="0.55"
+            strokeOpacity="0.75"
           />
           <rect
             x={x + 0.6}
@@ -304,7 +304,7 @@ export function CompressionLongSleeve({ metrics, geo }) {
             width={sleeveW - 1.2}
             height="7"
             rx="3"
-            fill="#2e2e40"
+            fill="#1b1b26"
             stroke="#5ab4ff"
             strokeWidth="1.2"
             strokeOpacity="0.8"
@@ -320,8 +320,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
             L ${cx - hemOut} ${hemY}
             Q ${cx - sideCtrl} ${midY} ${cx - shoulderOut} ${topY}
             Z`}
-        fill="#232330"
-        stroke="#4d4d68"
+        fill="#2a2a38"
+        stroke="#5c6a94"
         strokeWidth="1.4"
       />
       {/* raglan seams and panel lines are the whole read on a black garment —
@@ -332,8 +332,8 @@ export function CompressionLongSleeve({ metrics, geo }) {
           d={`M ${cx + s * (neckHalf + 1)} ${shoulderY - 5} Q ${cx + s * (shoulderOut * 0.7)} ${shoulderY + 4} ${cx + s * (shoulderOut - 1)} ${shoulderY + 16}`}
           fill="none"
           stroke="#5ab4ff"
-          strokeWidth="1.4"
-          strokeOpacity="0.7"
+          strokeWidth="1.6"
+          strokeOpacity="0.9"
         />
       ))}
       <path
@@ -364,7 +364,7 @@ export function CompressionLongSleeve({ metrics, geo }) {
       <path
         d={`M ${cx - shoulderOut * 0.62} ${shoulderY + 6} Q ${cx - shoulderOut * 0.78} ${midY} ${cx - hemOut * 0.6} ${hemY - 6}`}
         fill="none"
-        stroke="#3f3f58"
+        stroke="#3a3a52"
         strokeWidth="5"
         strokeOpacity="0.55"
         strokeLinecap="round"

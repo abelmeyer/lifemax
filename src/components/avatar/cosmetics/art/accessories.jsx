@@ -29,23 +29,23 @@ export function ChalkBag({ metrics }) {
 
 export function GymTowel({ metrics, geo }) {
   const g = geoOr(geo, metrics);
-  const { cx, shoulderY, hipY } = metrics;
+  const { cx, shoulderY, waistY } = metrics;
   // Slung over the near shoulder, so the drape has to start where the shoulder
   // actually ends — that edge slides 30 → 45px out across the six stages.
   const capOut = cx + g.shoulderHalf + 4;
-  const capIn = cx + 14;
+  const capIn = cx + g.shoulderHalf - 23;
   const capMid = (capIn + capOut) / 2;
   const fold = shoulderY + 5;
   // Constant-width tail hung off the outer edge rather than off cx, so a
   // narrow stage-1 shoulder gets the same towel as a wide stage-6 one.
   const tailR = cx + g.shoulderHalf;
-  const tailL = tailR - 20;
+  const tailL = tailR - 22;
   const tailMid = (tailL + tailR) / 2;
-  const hemY = hipY - 10;
+  const hemY = waistY - 2;
   const band = (y, w) => (
     <>
-      <line x1={tailL + 2} y1={y} x2={tailR - 2} y2={y} stroke="#6f7d8c" strokeWidth={w} />
-      <line x1={tailL + 2.5} y1={y + 4} x2={tailR - 2.5} y2={y + 4} stroke="#8f9aa8" strokeWidth={w * 0.5} />
+      <line x1={tailL + 2} y1={y} x2={tailR - 2} y2={y} stroke="#5d6b80" strokeWidth={w} />
+      <line x1={tailL + 2.5} y1={y + 4.5} x2={tailR - 2.5} y2={y + 4.5} stroke="#7d8a9c" strokeWidth={w * 0.6} />
     </>
   );
   return (
@@ -73,11 +73,14 @@ export function GymTowel({ metrics, geo }) {
         strokeWidth="1.3"
       />
       {/* woven bands at both ends — the detail that survives thumbnail scale */}
-      {band(fold + 8, 2.4)}
-      {band(hemY - 15, 2.8)}
-      <g stroke="#b0b7c1" strokeWidth="0.9" strokeOpacity="0.7">
-        <line x1={tailL + 4} y1={hemY - 32} x2={tailR - 4} y2={hemY - 32} />
-        <line x1={tailL + 4} y1={hemY - 26} x2={tailR - 4} y2={hemY - 26} />
+      {band(fold + 10, 3.4)}
+      {band(hemY - 17, 3.4)}
+      {/* terry texture — reads as cloth rather than card at thumbnail size */}
+      <g stroke="#aeb6c1" strokeWidth="0.9" strokeOpacity="0.75">
+        <line x1={tailL + 4} y1={hemY - 32} x2={tailMid + 1} y2={hemY - 32} />
+        <line x1={tailMid - 1} y1={hemY - 27} x2={tailR - 4} y2={hemY - 27} />
+        <line x1={tailL + 4} y1={hemY - 22} x2={tailMid + 2} y2={hemY - 22} />
+        <line x1={tailMid - 4} y1={fold + 20} x2={tailMid - 4.5} y2={hemY - 6} strokeOpacity="0.4" />
       </g>
       {/* the fold lying across the shoulder, drawn last so it caps both tails */}
       <path
@@ -218,8 +221,8 @@ export function ChampionshipMedal({ metrics }) {
   // Hangs off the neck, and neck width and head radius are fixed across the
   // stages — this one rides the centerline, not the torso edges.
   const neckY = shoulderY - 2;
-  const ringY = shoulderY + 32;
-  const my = ringY + 13;
+  const ringY = shoulderY + 21;
+  const my = ringY + 9;
   const star = (r) =>
     `M ${cx} ${my - r} L ${cx + r * 0.31} ${my - r * 0.31} L ${cx + r} ${my - r * 0.22}
      L ${cx + r * 0.5} ${my + r * 0.29} L ${cx + r * 0.62} ${my + r * 0.98}
@@ -241,11 +244,11 @@ export function ChampionshipMedal({ metrics }) {
       />
       <path d={`M ${cx - 9.5} ${neckY + 2} L ${cx - 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
       <path d={`M ${cx + 9.5} ${neckY + 2} L ${cx + 4} ${ringY - 2}`} stroke="#e3bd54" strokeWidth="0.9" strokeOpacity="0.8" />
-      <circle cx={cx} cy={ringY + 1} r="3.2" fill="none" stroke="#e3bd54" strokeWidth="1.6" />
-      <circle cx={cx} cy={my} r="11" fill="#c69a2e" stroke="#8f6c1c" strokeWidth="1.3" />
-      <circle cx={cx} cy={my} r="8.4" fill="#e3bd54" stroke="#c69a2e" strokeWidth="0.9" />
-      <path d={star(5.4)} fill="#fdf3d0" stroke="#c69a2e" strokeWidth="0.6" />
-      <path d={`M ${cx - 8.6} ${my - 4} A 9.6 9.6 0 0 1 ${cx - 2} ${my - 10.4}`} fill="none" stroke="#fff3c9" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx={cx} cy={ringY + 1} r="2.9" fill="none" stroke="#e3bd54" strokeWidth="1.6" />
+      <circle cx={cx} cy={my} r="9.5" fill="#c69a2e" stroke="#8f6c1c" strokeWidth="1.3" />
+      <circle cx={cx} cy={my} r="7.2" fill="#e3bd54" stroke="#c69a2e" strokeWidth="0.9" />
+      <path d={star(4.7)} fill="#fdf3d0" stroke="#c69a2e" strokeWidth="0.6" />
+      <path d={`M ${cx - 7.4} ${my - 3.4} A 8.3 8.3 0 0 1 ${cx - 1.7} ${my - 9}`} fill="none" stroke="#fff3c9" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round" />
     </g>
   );
 }

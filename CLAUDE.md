@@ -24,7 +24,7 @@ Personal fitness PWA. React + Vite + Tailwind + Supabase. Mobile-first, saves to
   `node scripts/preview-shot.mjs http://localhost:5173/preview/journal out.png 460`
 
 ## Remaining to ship
-- Operator: run supabase/sprint13_migration.sql (sprint10/11 are already applied on the live project), then deploy (Vercel) whenever ready. Every feature degrades gracefully until then (default avatar, no forced setup, journal and badges explain themselves), so the app is never broken by an unrun migration — but nothing persists either.
+- Operator: sprint10, sprint11 and sprint13 migrations are applied on the live project (sprint13 on 2026-10-21); deploy (Vercel) whenever ready. Every feature degrades gracefully until then (default avatar, no forced setup, journal and badges explain themselves), so the app is never broken by an unrun migration — but nothing persists either.
 - Store catalog growth: add rows to store_items in Supabase, then matching art in
   src/components/avatar/cosmetics/itemArt.jsx keyed by the item's exact name (unknown
   names fall back to the generic slot placeholder, so partial rollouts are safe).

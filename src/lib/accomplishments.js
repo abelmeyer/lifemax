@@ -439,12 +439,12 @@ export async function buildStats(userId, { avatarState, economy, habitStreaks, p
       pullups: Math.max(liveBest("pullups"), longestRun(metDates.pullups)),
       swims: liveBest("swims"),
     },
-    // Recomputed from history, not read off avatarState.streak: the live
-    // counter resets to 0 the first missed day, and the engine's backfill
-    // walks past days silently — so a genuinely completed 7-day run could be
-    // zeroed before anything ever observed it, leaving streak_7 permanently
-    // unearnable. The live value still participates in case it is ahead.
-    bestAvatarStreak: Math.max(avatarState?.streak ?? 0, longestRun(fullDates)),
+    // Full-completion streak (workout + 2 habits), recomputed from history.
+    // Deliberately not mixed with avatarState.streak: since Sprint 13 that
+    // counter tracks the looser "active day" (any lift, cardio or habit), so
+    // letting it participate would award these badges for days that were
+    // never full completions.
+    bestAvatarStreak: longestRun(fullDates),
     level: avatarState?.level ?? 1,
     prestige: economy?.prestige_level ?? 0,
     ownedItems: owned.length,

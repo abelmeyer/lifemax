@@ -27,7 +27,13 @@ export default function Dashboard() {
   const [justLeveledUp, setJustLeveledUp] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState([]);
   const [economy, setEconomy] = useState(null);
-  const [weekProgress, setWeekProgress] = useState({ fullDays: 0, needed: 5 });
+  const [weekProgress, setWeekProgress] = useState({
+    lifts: 0,
+    liftsNeeded: 3,
+    cardio: 0,
+    cardioNeeded: 2,
+    complete: false,
+  });
   const [justGainedAura, setJustGainedAura] = useState(false);
   const [equippedCosmetics, setEquippedCosmetics] = useState([]);
   const [totals, setTotals] = useState({ protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
@@ -171,31 +177,44 @@ export default function Dashboard() {
 
       <div
         className="card-shadow mb-3 rounded-card border border-border bg-surface px-4 py-3.5"
-        style={{
-          borderColor: weekProgress.fullDays >= weekProgress.needed ? "rgba(52,211,153,0.25)" : undefined,
-        }}
+        style={{ borderColor: weekProgress.complete ? "rgba(52,211,153,0.25)" : undefined }}
       >
-        <div className="mb-2 flex items-baseline justify-between">
+        <div className="mb-2 flex items-baseline justify-between gap-3">
           <span className="text-[12px] text-muted">
             Prestige {economy.prestige_level} → {economy.prestige_level + 1}
           </span>
-          <span
-            className="font-mono text-[12px]"
-            style={{ color: weekProgress.fullDays >= weekProgress.needed ? "#34d399" : "#e8eaf0" }}
-          >
-            {weekProgress.fullDays >= weekProgress.needed
-              ? "Complete this week ✓"
-              : `${weekProgress.fullDays}/${weekProgress.needed} days this week`}
+          <span className="font-mono text-[12px]" style={{ color: weekProgress.complete ? "#34d399" : "#e8eaf0" }}>
+            Lifts {weekProgress.lifts}/{weekProgress.liftsNeeded} · Cardio {weekProgress.cardio}/
+            {weekProgress.cardioNeeded}
+            {weekProgress.complete && " ✓"}
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div
-            className="h-full rounded-full transition-all duration-300 ease-out"
-            style={{
-              width: `${Math.min(100, (weekProgress.fullDays / weekProgress.needed) * 100)}%`,
-              background: weekProgress.fullDays >= weekProgress.needed ? "#34d399" : "#5ab4ff",
-            }}
-          />
+        {/* One segment per requirement, sized by how many sessions each needs,
+            so it's obvious which half of the week is still open. */}
+        <div className="flex gap-1">
+          {[
+            { label: "Lifts", value: weekProgress.lifts, needed: weekProgress.liftsNeeded },
+            { label: "Cardio", value: weekProgress.cardio, needed: weekProgress.cardioNeeded },
+          ].map((seg) => (
+            <div
+              key={seg.label}
+              role="progressbar"
+              aria-label={`${seg.label} this week`}
+              aria-valuemin={0}
+              aria-valuemax={seg.needed}
+              aria-valuenow={seg.value}
+              className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]"
+              style={{ flexGrow: seg.needed, flexBasis: 0 }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: `${Math.min(100, (seg.value / seg.needed) * 100)}%`,
+                  background: weekProgress.complete ? "#34d399" : "#5ab4ff",
+                }}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

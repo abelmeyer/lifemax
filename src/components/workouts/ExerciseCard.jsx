@@ -5,7 +5,10 @@ import { todayStr } from "../../lib/dateUtils";
 import { useRestTimer } from "../../lib/RestTimerContext";
 import { restSecondsFor, formatClock } from "../../lib/rest";
 
-export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
+// programDay tags each logged set with the program day it belongs to.
+// supersetNext names the exercise performed straight after this one: rest
+// is held until that partner's set, so no timer starts here.
+export default function ExerciseCard({ exercise, userId, programDay, supersetNext, onSetLogged, onSetsChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(null);
@@ -69,6 +72,7 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
         setNumber,
         weightLbs: weightNum,
         reps: repsNum,
+        programDay,
       });
 
       setHistory((h) => ({
@@ -88,11 +92,13 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
       // Rest starts the moment the set lands — that's when the clock really
       // starts, and it saves a tap during the part of the session where you
       // least want to be fiddling with a phone.
-      restTimer.start(restSeconds, `Rest · ${exercise.name}`);
+      // Mid-superset there's no rest at all — you go straight to the partner.
+      if (!supersetNext) restTimer.start(restSeconds, `Rest · ${exercise.name}`);
 
       setWeight("");
       setReps("");
       setAdding(false);
+      onSetLogged?.(newSet);
       onSetsChanged?.();
     } catch {
       setError("Couldn't save set");
@@ -172,7 +178,8 @@ export default function ExerciseCard({ exercise, userId, onSetsChanged }) {
         <div className="min-w-0">
           <h3 className="truncate text-[15px] font-medium text-body">{exercise.name}</h3>
           <p className="mt-0.5 font-mono text-[12px] text-muted">
-            {exercise.default_sets} × {exercise.rep_scheme} · rest {formatClock(restSeconds)}
+            {exercise.default_sets} × {exercise.rep_scheme} ·{" "}
+            {supersetNext ? "no rest" : `rest ${formatClock(restSeconds)}`}
           </p>
         </div>
         <ChevronIcon

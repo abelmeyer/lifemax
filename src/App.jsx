@@ -23,6 +23,7 @@ import DevPreview, {
   DevDayDetailPreview,
   DevJournalPreview,
   DevDashboardPreview,
+  DevWorkoutsScreenPreview,
 } from "./screens/DevPreview";
 
 function RequireAuth({ children }) {
@@ -77,6 +78,7 @@ function AppRoutes() {
       {import.meta.env.DEV && <Route path="/preview/day" element={<DevDayDetailPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/journal" element={<DevJournalPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/dashboard" element={<DevDashboardPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/workouts" element={<DevWorkoutsScreenPreview />} />}
       <Route
         path="/"
         element={

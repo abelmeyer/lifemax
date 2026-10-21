@@ -7,9 +7,9 @@ import {
   upsertHabitStreak,
   fetchSwimCountForWeek,
   habitMet,
-  countHabitsMet,
   WEEKLY_SWIM_TARGET,
 } from "./habits";
+import { fetchTrainingActivity, isActiveDay } from "./activity";
 import { getNewlyUnlockedGear } from "./avatarConfig";
 
 const DAILY_HABITS = ["pushups", "situps", "pullups"];
@@ -42,16 +42,6 @@ async function saveAvatarState(userId, patch) {
     .single();
   if (error) throw error;
   return data;
-}
-
-async function fetchActivityDates(userId, start, end) {
-  const [{ data: setsData, error: e1 }, { data: cardioData, error: e2 }] = await Promise.all([
-    supabase.from("workout_sets").select("date").eq("user_id", userId).gte("date", start).lte("date", end),
-    supabase.from("cardio_sessions").select("date").eq("user_id", userId).gte("date", start).lte("date", end),
-  ]);
-  if (e1) throw e1;
-  if (e2) throw e2;
-  return new Set([...(setsData ?? []).map((r) => r.date), ...(cardioData ?? []).map((r) => r.date)]);
 }
 
 function applyStreakStep(streak, met, dateLabel, prevDateLabel) {
@@ -106,13 +96,13 @@ export async function syncAvatarProgress(userId) {
     const logs = await fetchHabitLogsInRange(userId, cursor, addDaysStr(today, -1));
     const logsByDate = {};
     for (const log of logs) logsByDate[log.date] = log;
-    const activityDates = await fetchActivityDates(userId, cursor, addDaysStr(today, -1));
+    const activity = await fetchTrainingActivity(userId, cursor, addDaysStr(today, -1));
 
     while (cursor < today) {
       const log = logsByDate[cursor] ?? null;
-      const workoutDone = activityDates.has(cursor);
-      const habitsMetCount = countHabitsMet(log, pullupTarget);
-      const success = workoutDone && habitsMetCount >= 2;
+      // An active day (lift, cardio, or any habit at target) extends the
+      // streak and levels up; anything else resets the streak and levels down.
+      const success = isActiveDay(activity, cursor, log, pullupTarget);
 
       if (success) {
         avatarState = { ...avatarState, level: avatarState.level + 1, streak: avatarState.streak + 1 };
@@ -141,10 +131,8 @@ export async function syncAvatarProgress(userId) {
   // Live check for "today" — only commits once per day, but is safe to
   // re-run repeatedly before that (it just won't have flipped yet).
   if (avatarState.last_evaluated_date !== today) {
-    const activityDates = await fetchActivityDates(userId, today, today);
-    const workoutDone = activityDates.has(today);
-    const habitsMetCount = countHabitsMet(todaysLog, pullupTarget);
-    const success = workoutDone && habitsMetCount >= 2;
+    const activity = await fetchTrainingActivity(userId, today, today);
+    const success = isActiveDay(activity, today, todaysLog, pullupTarget);
 
     if (success) {
       avatarState = {

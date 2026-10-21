@@ -10,6 +10,7 @@ import DayDetail from "../components/calendar/DayDetail";
 import Gratitude from "./Gratitude";
 import Accomplishments from "./Accomplishments";
 import Dashboard from "./Dashboard";
+import Workouts from "./Workouts";
 import { AccomplishmentsProvider } from "../lib/AccomplishmentsContext";
 import AvatarBody from "../components/avatar/AvatarBody";
 import ItemThumb from "../components/avatar/cosmetics/ItemThumb";
@@ -340,6 +341,23 @@ export function DevDashboardPreview() {
           </div>
         </AccomplishmentsProvider>
       </CustomizationContext.Provider>
+    </AuthContext.Provider>
+  );
+}
+
+// The real Workouts screen (cycle switcher, Full Body rotation, supersets)
+// against the mocked REST layer in scripts/preview-shot.mjs.
+export function DevWorkoutsScreenPreview() {
+  const auth = { user: { id: "dev-preview", email: "you@example.com" }, loading: false, signOut: async () => {} };
+  return (
+    <AuthContext.Provider value={auth}>
+      <AccomplishmentsProvider>
+        <RestTimerProvider>
+          <div className="mx-auto max-w-md px-4 py-8">
+            <Workouts />
+          </div>
+        </RestTimerProvider>
+      </AccomplishmentsProvider>
     </AuthContext.Provider>
   );
 }

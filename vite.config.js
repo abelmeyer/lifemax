@@ -10,6 +10,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered from src/lib/pwaUpdates.js, which controls when an update
+      // reloads the page.
+      injectRegister: false,
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Lifemaxx',

@@ -5,11 +5,10 @@ import {
   fetchHabitSettings,
   fetchHabitStreaks,
   upsertHabitStreak,
-  fetchSwimCountForWeek,
   habitMet,
   WEEKLY_SWIM_TARGET,
 } from "./habits";
-import { fetchTrainingActivity, isActiveDay } from "./activity";
+import { fetchTrainingActivity, fetchSwimDates, isActiveDay, serialized } from "./activity";
 import { getNewlyUnlockedGear } from "./avatarConfig";
 
 const DAILY_HABITS = ["pushups", "situps", "pullups"];
@@ -57,18 +56,38 @@ function applyStreakStep(streak, met, dateLabel, prevDateLabel) {
   };
 }
 
+function sameStreak(a, b) {
+  return (
+    (a?.current_streak ?? 0) === (b?.current_streak ?? 0) &&
+    (a?.best_streak ?? 0) === (b?.best_streak ?? 0) &&
+    (a?.last_completed ?? null) === (b?.last_completed ?? null)
+  );
+}
+
 /**
  * Backfills any unevaluated past days/weeks since the last visit, then
  * checks "today" / "this week" live. Safe to call on every Dashboard or
- * Habits mount — fully idempotent within the same day/week.
+ * Habits mount — fully idempotent within the same day/week, and serialized
+ * so overlapping calls can't race their writes.
+ *
+ * Three round trips regardless of how much there is to backfill: current
+ * state, then every range it implies in one parallel batch, then only the
+ * rows that actually changed.
  */
-export async function syncAvatarProgress(userId) {
+export const syncAvatarProgress = serialized(async function syncAvatarProgress(userId) {
   const today = todayStr();
-  const settings = await fetchHabitSettings(userId);
+  const yesterday = addDaysStr(today, -1);
+  const thisWeekStart = weekStartStr(today);
+
+  const [settings, fetchedState, fetchedStreaks] = await Promise.all([
+    fetchHabitSettings(userId),
+    fetchAvatarState(userId),
+    fetchHabitStreaks(userId),
+  ]);
   const pullupTarget = settings.pullup_target;
 
-  let avatarState = await fetchAvatarState(userId);
-  let habitStreaks = await fetchHabitStreaks(userId);
+  let avatarState = fetchedState;
+  const habitStreaks = { ...fetchedStreaks };
   for (const h of [...DAILY_HABITS, "swims"]) {
     if (!habitStreaks[h]) {
       habitStreaks[h] = { habit: h, current_streak: 0, best_streak: 0, last_completed: null };
@@ -87,17 +106,39 @@ export async function syncAvatarProgress(userId) {
     for (const h of DAILY_HABITS) {
       habitStreaks[h] = { ...habitStreaks[h], current_streak: 0 };
     }
-    cursor = addDaysStr(today, -1);
+    cursor = yesterday;
+  }
+
+  // Weekly swim streak window, decided up front so its sessions load in the
+  // same batch as everything else.
+  const swimStreak = habitStreaks.swims;
+  let swimCursor = swimStreak.last_completed ? addDaysStr(swimStreak.last_completed, 7) : thisWeekStart;
+  const weekGap = swimStreak.last_completed
+    ? Math.round((Date.parse(thisWeekStart) - Date.parse(swimStreak.last_completed)) / (7 * 86400000))
+    : 0;
+  if (weekGap > MAX_BACKFILL_WEEKS) {
+    habitStreaks.swims = { ...swimStreak, current_streak: 0 };
+    swimCursor = thisWeekStart;
+  }
+
+  const dayStart = cursor < today ? cursor : today;
+  const swimStart = swimCursor < thisWeekStart ? swimCursor : thisWeekStart;
+  const [logs, activity, swimDates] = await Promise.all([
+    fetchHabitLogsInRange(userId, dayStart, today),
+    fetchTrainingActivity(userId, dayStart, today),
+    fetchSwimDates(userId, swimStart, addDaysStr(thisWeekStart, 6)),
+  ]);
+  const logsByDate = {};
+  for (const log of logs) logsByDate[log.date] = log;
+  const swimsByWeek = {};
+  for (const d of swimDates) {
+    const w = weekStartStr(d);
+    swimsByWeek[w] = (swimsByWeek[w] ?? 0) + 1;
   }
 
   let leveledUpToday = false;
 
   if (cursor < today) {
-    const logs = await fetchHabitLogsInRange(userId, cursor, addDaysStr(today, -1));
-    const logsByDate = {};
-    for (const log of logs) logsByDate[log.date] = log;
-    const activity = await fetchTrainingActivity(userId, cursor, addDaysStr(today, -1));
-
     while (cursor < today) {
       const log = logsByDate[cursor] ?? null;
       // An active day (lift, cardio, or any habit at target) extends the
@@ -123,32 +164,26 @@ export async function syncAvatarProgress(userId) {
     // visiting Habits, then Dashboard, then Workouts in the same day) would
     // re-walk this same backfill range and re-apply its level/streak
     // change on every call.
-    avatarState = { ...avatarState, last_evaluated_date: addDaysStr(today, -1) };
+    avatarState = { ...avatarState, last_evaluated_date: yesterday };
   }
 
-  const todaysLog = (await fetchHabitLogsInRange(userId, today, today))[0] ?? null;
+  const todaysLog = logsByDate[today] ?? null;
 
   // Live check for "today" — only commits once per day, but is safe to
   // re-run repeatedly before that (it just won't have flipped yet).
-  if (avatarState.last_evaluated_date !== today) {
-    const activity = await fetchTrainingActivity(userId, today, today);
-    const success = isActiveDay(activity, today, todaysLog, pullupTarget);
-
-    if (success) {
-      avatarState = {
-        ...avatarState,
-        level: avatarState.level + 1,
-        streak: avatarState.streak + 1,
-        last_evaluated_date: today,
-        last_progress_date: today,
-      };
-      leveledUpToday = true;
-    }
+  if (avatarState.last_evaluated_date !== today && isActiveDay(activity, today, todaysLog, pullupTarget)) {
+    avatarState = {
+      ...avatarState,
+      level: avatarState.level + 1,
+      streak: avatarState.streak + 1,
+      last_evaluated_date: today,
+      last_progress_date: today,
+    };
+    leveledUpToday = true;
   }
 
   // Per-habit "today" streak bump — independent of avatar-level gating,
   // and idempotent (guarded by last_completed already being today).
-  const yesterday = addDaysStr(today, -1);
   for (const h of DAILY_HABITS) {
     const streak = habitStreaks[h];
     if (streak.last_completed === today) continue;
@@ -158,49 +193,42 @@ export async function syncAvatarProgress(userId) {
   }
 
   // Weekly swim streak, evaluated the same way at week granularity.
-  const swimStreak = habitStreaks.swims;
-  const thisWeekStart = weekStartStr(today);
-  let swimCursor = swimStreak.last_completed ? addDaysStr(swimStreak.last_completed, 7) : thisWeekStart;
-  const weekGap = swimStreak.last_completed
-    ? Math.round((Date.parse(thisWeekStart) - Date.parse(swimStreak.last_completed)) / (7 * 86400000))
-    : 0;
-  if (weekGap > MAX_BACKFILL_WEEKS) {
-    habitStreaks.swims = { ...swimStreak, current_streak: 0 };
-    swimCursor = thisWeekStart;
-  }
   while (swimCursor < thisWeekStart) {
-    const count = await fetchSwimCountForWeek(userId, swimCursor);
-    const met = count >= WEEKLY_SWIM_TARGET;
-    const prevWeek = addDaysStr(swimCursor, -7);
-    habitStreaks.swims = applyStreakStep(habitStreaks.swims, met, swimCursor, prevWeek);
+    const met = (swimsByWeek[swimCursor] ?? 0) >= WEEKLY_SWIM_TARGET;
+    habitStreaks.swims = applyStreakStep(habitStreaks.swims, met, swimCursor, addDaysStr(swimCursor, -7));
     swimCursor = addDaysStr(swimCursor, 7);
   }
-  if (habitStreaks.swims.last_completed !== thisWeekStart) {
-    const count = await fetchSwimCountForWeek(userId, thisWeekStart);
-    if (count >= WEEKLY_SWIM_TARGET) {
-      const prevWeek = addDaysStr(thisWeekStart, -7);
-      habitStreaks.swims = applyStreakStep(habitStreaks.swims, true, thisWeekStart, prevWeek);
-    }
+  if (habitStreaks.swims.last_completed !== thisWeekStart && (swimsByWeek[thisWeekStart] ?? 0) >= WEEKLY_SWIM_TARGET) {
+    habitStreaks.swims = applyStreakStep(habitStreaks.swims, true, thisWeekStart, addDaysStr(thisWeekStart, -7));
   }
 
-  const savedState = await saveAvatarState(userId, {
-    level: avatarState.level,
-    streak: avatarState.streak,
-    last_progress_date: avatarState.last_progress_date,
-    last_evaluated_date: avatarState.last_evaluated_date,
-  });
+  // Most visits change nothing — skip the writes entirely then.
+  const stateChanged =
+    avatarState.level !== fetchedState.level ||
+    avatarState.streak !== fetchedState.streak ||
+    avatarState.last_progress_date !== fetchedState.last_progress_date ||
+    avatarState.last_evaluated_date !== fetchedState.last_evaluated_date;
+  const changedStreaks = Object.entries(habitStreaks).filter(([habit, s]) => !sameStreak(s, startingStreaks[habit]));
 
-  await Promise.all(
-    Object.entries(habitStreaks).map(([habit, s]) =>
+  const [savedState] = await Promise.all([
+    stateChanged
+      ? saveAvatarState(userId, {
+          level: avatarState.level,
+          streak: avatarState.streak,
+          last_progress_date: avatarState.last_progress_date,
+          last_evaluated_date: avatarState.last_evaluated_date,
+        })
+      : avatarState,
+    ...changedStreaks.map(([habit, s]) =>
       upsertHabitStreak(userId, habit, {
         currentStreak: s.current_streak,
         bestStreak: s.best_streak,
         lastCompleted: s.last_completed,
       }),
     ),
-  );
+  ]);
 
   const unlockedGear = getNewlyUnlockedGear(startingStreaks, habitStreaks);
 
   return { avatarState: savedState, habitStreaks, leveledUpToday, unlockedGear };
-}
+});

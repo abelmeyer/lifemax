@@ -5,6 +5,7 @@ import { CameraIcon, CompareIcon, PhotosIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { todayStr } from "../lib/dateUtils";
 import { fetchPhotos, uploadPhoto, getSignedUrls } from "../lib/photos";
+import LoadError from "../components/LoadError";
 
 function formatDate(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
@@ -21,19 +22,28 @@ export default function Photos() {
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [compareMode, setCompareMode] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
+    setLoadError(false);
     (async () => {
       const data = await fetchPhotos(user.id);
+      if (!mounted) return;
       setPhotos(data);
       if (data.length > 0) {
-        const map = await getSignedUrls(data.map((p) => p.storage_path));
-        setUrls(map);
         setSelectedId(data[data.length - 1].id);
+        const map = await getSignedUrls(data.map((p) => p.storage_path));
+        if (!mounted) return;
+        setUrls(map);
       }
       setLoading(false);
-    })();
-  }, [user.id]);
+    })().catch(() => mounted && setLoadError(true));
+    return () => {
+      mounted = false;
+    };
+  }, [user.id, reloadKey]);
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0];
@@ -62,9 +72,13 @@ export default function Photos() {
     return (
       <>
         <ScreenHeader title="Photos" subtitle="Visual progress over time." />
-        <div className="flex justify-center py-10">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
-        </div>
+        {loadError ? (
+          <LoadError message="Couldn't load your photos." onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
+          </div>
+        )}
       </>
     );
   }

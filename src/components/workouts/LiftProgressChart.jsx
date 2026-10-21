@@ -26,9 +26,12 @@ export default function LiftProgressChart({ userId }) {
 
   useEffect(() => {
     let mounted = true;
-    fetchLiftProgress(userId, TRACKED_LIFTS).then((data) => {
-      if (mounted) setLifts(data);
-    });
+    fetchLiftProgress(userId, TRACKED_LIFTS)
+      .then((data) => {
+        if (mounted) setLifts(data);
+      })
+      // A failed read hides the chart, same as having no data yet.
+      .catch(() => {});
     return () => {
       mounted = false;
     };

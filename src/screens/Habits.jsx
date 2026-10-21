@@ -15,6 +15,7 @@ import {
   HABIT_TARGETS,
 } from "../lib/habits";
 import { syncAvatarProgress } from "../lib/avatar";
+import LoadError from "../components/LoadError";
 
 const GEAR_LABELS = {
   situps: "Six-pack + sit-up bench",
@@ -30,31 +31,52 @@ export default function Habits() {
   const [streaks, setStreaks] = useState({});
   const [swimCount, setSwimCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [banner, setBanner] = useState(null);
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      const [todayLog, settings, swims] = await Promise.all([
-        fetchHabitLog(user.id, todayStr()),
-        fetchHabitSettings(user.id),
-        fetchSwimCountForWeek(user.id, currentWeekStart()),
-      ]);
-      if (!mounted) return;
-      if (todayLog) setLog({ pushups: todayLog.pushups, situps: todayLog.situps, pullups: todayLog.pullups });
-      setPullupTarget(settings.pullup_target);
-      setSwimCount(swims);
+    setLoadError(false);
+    // The streak sync is the slow part, so it runs alongside today's numbers
+    // instead of after them — the cards render as soon as the log is in, and
+    // the streak counts fill in when the sync lands.
+    syncAvatarProgress(user.id)
+      .then((result) => {
+        if (!mounted) return;
+        setStreaks(result.habitStreaks);
+        applyBanner(result);
+      })
+      .catch((e) => console.error("Habit streak sync failed", e));
 
-      const result = await syncAvatarProgress(user.id);
-      if (!mounted) return;
-      setStreaks(result.habitStreaks);
-      applyBanner(result);
-      setLoading(false);
-    })();
+    Promise.all([
+      fetchHabitLog(user.id, todayStr()),
+      fetchHabitSettings(user.id),
+      fetchSwimCountForWeek(user.id, currentWeekStart()),
+    ])
+      .then(([todayLog, settings, swims]) => {
+        if (!mounted) return;
+        if (todayLog) setLog({ pushups: todayLog.pushups, situps: todayLog.situps, pullups: todayLog.pullups });
+        setPullupTarget(settings.pullup_target);
+        setSwimCount(swims);
+        setLoading(false);
+      })
+      .catch(() => mounted && setLoadError(true));
     return () => {
       mounted = false;
     };
-  }, [user.id]);
+  }, [user.id, reloadKey]);
+
+  // Streaks and level are derived data: refresh them in the background after
+  // a save so the save itself returns as soon as the number is stored.
+  function resync() {
+    syncAvatarProgress(user.id)
+      .then((result) => {
+        setStreaks(result.habitStreaks);
+        applyBanner(result);
+      })
+      .catch((e) => console.error("Habit streak sync failed", e));
+  }
 
   function applyBanner(result) {
     if (result.leveledUpToday) {
@@ -73,28 +95,26 @@ export default function Habits() {
     const nextLog = { ...log, [habitKey]: value };
     const saved = await upsertHabitLog({ userId: user.id, date: todayStr(), ...nextLog });
     setLog({ pushups: saved.pushups, situps: saved.situps, pullups: saved.pullups });
-
-    const result = await syncAvatarProgress(user.id);
-    setStreaks(result.habitStreaks);
-    applyBanner(result);
+    resync();
   }
 
   async function handleTargetChange(value) {
     await upsertPullupTarget(user.id, value);
     setPullupTarget(value);
-
-    const result = await syncAvatarProgress(user.id);
-    setStreaks(result.habitStreaks);
-    applyBanner(result);
+    resync();
   }
 
   if (loading) {
     return (
       <>
         <ScreenHeader title="Habits" subtitle="Build streaks that stick." />
-        <div className="flex justify-center py-10">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
-        </div>
+        {loadError ? (
+          <LoadError message="Couldn't load your habits." onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
+          </div>
+        )}
       </>
     );
   }

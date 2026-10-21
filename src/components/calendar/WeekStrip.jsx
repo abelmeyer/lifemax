@@ -10,6 +10,8 @@ export default function WeekStrip({ userId }) {
   const [days, setDays] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [monthInitialDate, setMonthInitialDate] = useState(null);
   const [showMonth, setShowMonth] = useState(false);
 
@@ -17,6 +19,7 @@ export default function WeekStrip({ userId }) {
     let mounted = true;
     const range = getLastNDays(7);
     setDays(range);
+    setLoadFailed(false);
     (async () => {
       const summary = await fetchRangeSummary(userId, range[0], range[range.length - 1]);
       if (!mounted) return;
@@ -25,11 +28,11 @@ export default function WeekStrip({ userId }) {
       for (const d of range) map[d] = classifyDay(d, summary, today);
       setStatuses(map);
       setLoading(false);
-    })();
+    })().catch(() => mounted && setLoadFailed(true));
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [userId, reloadKey]);
 
   const today = todayStr();
   const fullDays = days.filter((d) => statuses[d] === "full").length;
@@ -60,7 +63,15 @@ export default function WeekStrip({ userId }) {
           </button>
         </div>
 
-        {loading ? (
+        {loadFailed ? (
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="w-full py-2 text-center text-[12px] text-muted transition-colors duration-200 hover:text-body"
+          >
+            Couldn't load the last 7 days — tap to retry
+          </button>
+        ) : loading ? (
           <div className="flex justify-center py-2">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-accent" />
           </div>

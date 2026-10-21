@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeftIcon, SparkleIcon, StarIcon } from "../components/icons";
 import StoreItemRow from "../components/store/StoreItemRow";
+import LoadError from "../components/LoadError";
 import { useAuth } from "../lib/AuthContext";
 import { fetchEconomy, fetchStoreItems, fetchOwnedItems, purchaseItem, equipItem, unequipItem } from "../lib/economy";
 
@@ -25,9 +26,12 @@ export default function Store() {
   const [pendingId, setPendingId] = useState(null);
   const [justActionedId, setJustActionedId] = useState(null);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setLoadError(false);
     (async () => {
       const [econ, storeItems, owned] = await Promise.all([
         fetchEconomy(user.id),
@@ -39,11 +43,11 @@ export default function Store() {
       setItems(storeItems);
       setOwnedById(Object.fromEntries(owned.map((o) => [o.item_id, o])));
       setLoading(false);
-    })();
+    })().catch(() => mounted && setLoadError(true));
     return () => {
       mounted = false;
     };
-  }, [user.id]);
+  }, [user.id, reloadKey]);
 
   function flashAction(itemId) {
     setJustActionedId(itemId);
@@ -107,9 +111,13 @@ export default function Store() {
         <div className="mb-6 flex items-center gap-3">
           <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-body">Store</h1>
         </div>
-        <div className="flex justify-center py-10">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
-        </div>
+        {loadError ? (
+          <LoadError message="Couldn't load the store." onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
+          </div>
+        )}
       </>
     );
   }

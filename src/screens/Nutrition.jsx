@@ -1,36 +1,51 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import ScreenHeader from "../components/ScreenHeader";
 import MacroBar from "../components/MacroBar";
 import FoodSearch from "../components/nutrition/FoodSearch";
 import MealBank from "../components/nutrition/MealBank";
-import ProteinTrendChart from "../components/nutrition/ProteinTrendChart";
 import { XIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
 import { todayStr } from "../lib/dateUtils";
 import { fetchMealsForDate, logMeal, deleteMeal, sumMacros, NUTRITION_TARGETS } from "../lib/nutrition";
+
+// Loaded on demand — see the note on LiftProgressChart in Workouts.
+const ProteinTrendChart = lazy(() => import("../components/nutrition/ProteinTrendChart"));
 
 export default function Nutrition() {
   const { user } = useAuth();
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [justLoggedId, setJustLoggedId] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchMealsForDate(user.id, todayStr())
       .then(setMeals)
+      // An empty list here would read as "nothing eaten today" — say so.
+      .catch(() => setError("Couldn't load today's meals — reopen the tab to retry."))
       .finally(() => setLoading(false));
   }, [user.id]);
 
   async function handleLog(meal) {
-    const saved = await logMeal({ userId: user.id, date: todayStr(), ...meal });
-    setMeals((m) => [...m, saved]);
-    setJustLoggedId(saved.id);
-    setTimeout(() => setJustLoggedId(null), 360);
+    setError("");
+    try {
+      const saved = await logMeal({ userId: user.id, date: todayStr(), ...meal });
+      setMeals((m) => [...m, saved]);
+      setJustLoggedId(saved.id);
+      setTimeout(() => setJustLoggedId(null), 360);
+    } catch {
+      setError(`Couldn't log ${meal.name} — try again.`);
+    }
   }
 
   async function handleDelete(id) {
-    await deleteMeal(id);
-    setMeals((m) => m.filter((meal) => meal.id !== id));
+    setError("");
+    try {
+      await deleteMeal(id);
+      setMeals((m) => m.filter((meal) => meal.id !== id));
+    } catch {
+      setError("Couldn't remove that meal — try again.");
+    }
   }
 
   const totals = sumMacros(meals);
@@ -49,6 +64,7 @@ export default function Nutrition() {
   return (
     <>
       <ScreenHeader title="Nutrition" subtitle="Protein and calories, tracked simply." />
+      {error && <p className="-mt-3 mb-4 text-[12px] text-[#ff6b6b]">{error}</p>}
 
       <div className="card-shadow mb-3 flex flex-col gap-3 rounded-card border border-border bg-surface p-5">
         <MacroBar label="Protein" value={totals.protein_g} target={NUTRITION_TARGETS.protein} />
@@ -57,7 +73,9 @@ export default function Nutrition() {
         <MacroBar label="Calories" value={totals.calories} unit="" target={NUTRITION_TARGETS.calories} />
       </div>
 
-      <ProteinTrendChart userId={user.id} />
+      <Suspense fallback={null}>
+        <ProteinTrendChart userId={user.id} />
+      </Suspense>
 
       {meals.length > 0 && (
         <div className="card-shadow mb-3 rounded-card border border-border bg-surface p-5">

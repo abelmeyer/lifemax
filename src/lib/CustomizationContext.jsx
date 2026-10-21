@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { fetchCustomization, saveCustomization } from "./avatarCustomization";
+import { readCache, writeCache } from "./cache";
 
 export const CustomizationContext = createContext(undefined);
 
@@ -21,21 +22,28 @@ export const CustomizationContext = createContext(undefined);
 // so a table with RLS enabled but no policy returns zero rows with no error —
 // indistinguishable from "new user". That's why the escape hatch exists rather
 // than relying on error detection alone.
+//
+// A saved customization is cached locally, so on every launch after the first
+// the gate opens immediately instead of holding the whole app behind a
+// network round trip; the row is still re-read in the background. Only a
+// cached *saved* row skips the wait — a user who still needs setup always
+// gets the real answer before anything renders.
 export function CustomizationProvider({ children }) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [customization, setCustomization] = useState(null);
+  const [cachedRow] = useState(() => readCache("customization", user.id));
+  const [loading, setLoading] = useState(!cachedRow);
+  const [customization, setCustomization] = useState(cachedRow);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [tableMissing, setTableMissing] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
     (async () => {
       try {
         const { customization: row, tableMissing: missing } = await fetchCustomization(user.id);
         if (!mounted) return;
+        if (row) writeCache("customization", user.id, row);
         setCustomization(row);
         setTableMissing(missing);
         setLoadFailed(false);
@@ -46,6 +54,8 @@ export function CustomizationProvider({ children }) {
         // the row, so the editor can warn before overwriting it.
         console.error("Failed to load avatar customization", e);
         if (!mounted) return;
+        // A cached row is still the best available answer offline.
+        if (cachedRow) return;
         setCustomization(null);
         setTableMissing(false);
         setLoadFailed(true);
@@ -57,11 +67,12 @@ export function CustomizationProvider({ children }) {
     return () => {
       mounted = false;
     };
-  }, [user.id]);
+  }, [user.id, cachedRow]);
 
   const save = useCallback(
     async (values) => {
       const row = await saveCustomization(user.id, values);
+      writeCache("customization", user.id, row);
       setCustomization(row);
       setLoadFailed(false);
       setNeedsSetup(false);

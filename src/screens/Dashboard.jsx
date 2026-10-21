@@ -15,31 +15,35 @@ import { getStageLabel } from "../lib/avatarConfig";
 import { todayStr } from "../lib/dateUtils";
 import { syncEconomy, fetchEquippedItems, getTodaysAuraEarned } from "../lib/economy";
 import { fetchMealsForDate, sumMacros, weeklyProteinAverage, NUTRITION_TARGETS } from "../lib/nutrition";
-import { fetchPhotos, getSignedUrls } from "../lib/photos";
+import { fetchLatestPhoto, getSignedUrls } from "../lib/photos";
+import { readCache, writeCache } from "../lib/cache";
+import LoadError from "../components/LoadError";
+
+const DEFAULT_WEEK_PROGRESS = { lifts: 0, liftsNeeded: 3, cardio: 0, cardioNeeded: 2, complete: false };
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { customization } = useCustomization();
   const { celebrate } = useAccomplishments();
+  // Last visit's numbers, painted immediately on a cold start and replaced
+  // once the sync lands — so opening the app shows the dashboard, not a
+  // spinner waiting on half a dozen round trips.
+  const [cached] = useState(() => readCache("dashboard", user.id));
   const [gratitudeFilled, setGratitudeFilled] = useState(0);
-  const [avatarState, setAvatarState] = useState(null);
-  const [habitStreaks, setHabitStreaks] = useState({});
+  const [avatarState, setAvatarState] = useState(cached?.avatarState ?? null);
+  const [habitStreaks, setHabitStreaks] = useState(cached?.habitStreaks ?? {});
   const [justLeveledUp, setJustLeveledUp] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState([]);
-  const [economy, setEconomy] = useState(null);
-  const [weekProgress, setWeekProgress] = useState({
-    lifts: 0,
-    liftsNeeded: 3,
-    cardio: 0,
-    cardioNeeded: 2,
-    complete: false,
-  });
+  const [economy, setEconomy] = useState(cached?.economy ?? null);
+  const [weekProgress, setWeekProgress] = useState(cached?.weekProgress ?? DEFAULT_WEEK_PROGRESS);
   const [justGainedAura, setJustGainedAura] = useState(false);
-  const [equippedCosmetics, setEquippedCosmetics] = useState([]);
-  const [totals, setTotals] = useState({ protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
-  const [weeklyProtein, setWeeklyProtein] = useState(0);
+  const [equippedCosmetics, setEquippedCosmetics] = useState(cached?.equippedCosmetics ?? []);
+  const [totals, setTotals] = useState(cached?.totals ?? { protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0 });
+  const [weeklyProtein, setWeeklyProtein] = useState(cached?.weeklyProtein ?? 0);
   const [latestPhotoUrl, setLatestPhotoUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -49,20 +53,33 @@ export default function Dashboard() {
 
   useEffect(() => {
     let mounted = true;
+    setLoadError(false);
+
+    // Secondary tiles load on their own and never hold up the core card —
+    // a slow photo or nutrition query used to keep the whole screen on a
+    // spinner, and a failed one kept it there forever.
+    fetchLatestPhoto(user.id)
+      .then((photo) => (photo ? getSignedUrls([photo.storage_path]).then((urls) => urls[photo.storage_path]) : null))
+      .then((url) => mounted && setLatestPhotoUrl(url))
+      .catch(() => {});
+    fetchGratitude(user.id, todayStr())
+      .then(({ entry }) => mounted && setGratitudeFilled(countFilled(entry?.items)))
+      .catch(() => {});
+
     (async () => {
-      const [avatarResult, economyResult, equipped, meals, weeklyAvg, photos] = await Promise.all([
+      const [avatarResult, economyResult, equipped, meals, weeklyAvg] = await Promise.all([
         syncAvatarProgress(user.id),
         syncEconomy(user.id),
-        fetchEquippedItems(user.id),
-        fetchMealsForDate(user.id, todayStr()),
-        weeklyProteinAverage(user.id),
-        fetchPhotos(user.id),
+        fetchEquippedItems(user.id).catch(() => null),
+        fetchMealsForDate(user.id, todayStr()).catch(() => null),
+        weeklyProteinAverage(user.id).catch(() => null),
       ]);
       if (!mounted) return;
 
+      const nextTotals = meals ? sumMacros(meals) : null;
       setAvatarState(avatarResult.avatarState);
-      setEquippedCosmetics(equipped);
       setHabitStreaks(avatarResult.habitStreaks);
+      if (equipped) setEquippedCosmetics(equipped);
       if (avatarResult.leveledUpToday) {
         setJustLeveledUp(true);
         setTimeout(() => setJustLeveledUp(false), 700);
@@ -79,26 +96,23 @@ export default function Dashboard() {
         setTimeout(() => setJustGainedAura(false), 400);
       }
 
-      setTotals(sumMacros(meals));
-      setWeeklyProtein(weeklyAvg);
-
-      if (photos.length > 0) {
-        const latest = photos[photos.length - 1];
-        const urls = await getSignedUrls([latest.storage_path]);
-        if (mounted) setLatestPhotoUrl(urls[latest.storage_path]);
-      }
-
+      if (nextTotals) setTotals(nextTotals);
+      if (weeklyAvg !== null) setWeeklyProtein(weeklyAvg);
       setLoading(false);
+
+      writeCache("dashboard", user.id, {
+        avatarState: avatarResult.avatarState,
+        habitStreaks: avatarResult.habitStreaks,
+        economy: economyResult.economy,
+        weekProgress: economyResult.weekProgress,
+        equippedCosmetics: equipped ?? cached?.equippedCosmetics ?? [],
+        totals: nextTotals ?? cached?.totals,
+        weeklyProtein: weeklyAvg ?? cached?.weeklyProtein ?? 0,
+      });
 
       // Non-blocking: the dashboard is already usable, and a badge that pops
       // a beat later is fine — a slow achievement scan holding up the whole
       // screen would not be.
-      fetchGratitude(user.id, todayStr())
-        .then(({ entry }) => {
-          if (mounted) setGratitudeFilled(countFilled(entry?.items));
-        })
-        .catch(() => {});
-
       syncAccomplishments(user.id, {
         avatarState: avatarResult.avatarState,
         economy: economyResult.economy,
@@ -111,21 +125,29 @@ export default function Dashboard() {
         // it is no longer "newly" earned.
         .then((r) => celebrate(r.newlyEarned))
         .catch(() => {});
-    })();
+    })().catch((e) => {
+      console.error("Dashboard sync failed", e);
+      if (mounted) setLoadError(true);
+    });
     return () => {
       mounted = false;
     };
     // celebrate is stable (useCallback with no deps) — listed to satisfy the
-    // exhaustive-deps rule without causing a refetch loop.
-  }, [user.id, celebrate]);
+    // exhaustive-deps rule without causing a refetch loop. `cached` is
+    // lazy-initialized state that never changes, so listing it is free.
+  }, [user.id, celebrate, reloadKey, cached]);
 
-  if (loading) {
+  if (loading || !avatarState || !economy) {
     return (
       <>
         <ScreenHeader title="Dashboard" subtitle="Your daily overview at a glance." />
-        <div className="flex justify-center py-10">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
-        </div>
+        {loadError ? (
+          <LoadError message="Couldn't load your dashboard." onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
+          </div>
+        )}
       </>
     );
   }

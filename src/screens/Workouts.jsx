@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import ScreenHeader from "../components/ScreenHeader";
 import EmptyState from "../components/EmptyState";
 import DaySelector from "../components/workouts/DaySelector";
@@ -7,7 +7,6 @@ import FullBodyDayPicker from "../components/workouts/FullBodyDayPicker";
 import SupersetGroup from "../components/workouts/SupersetGroup";
 import ExerciseCard from "../components/workouts/ExerciseCard";
 import CardioLogger from "../components/workouts/CardioLogger";
-import LiftProgressChart from "../components/workouts/LiftProgressChart";
 import WorkoutSessionCard from "../components/workouts/WorkoutSessionCard";
 import { HabitsIcon } from "../components/icons";
 import { useAuth } from "../lib/AuthContext";
@@ -31,6 +30,10 @@ import {
   fetchLastFullBodyDay,
   rememberFullBodyDay,
 } from "../lib/training";
+
+// Recharts (and the d3 it pulls in) is about a third of the app's code and
+// only the two progress charts use it, so it loads on demand.
+const LiftProgressChart = lazy(() => import("../components/workouts/LiftProgressChart"));
 
 const DAY_STORAGE_KEY = "lifemaxx_workout_day";
 // A manual Full Body pick only holds for the day it was made — tomorrow the
@@ -205,7 +208,9 @@ export default function Workouts() {
           <DaySelector day={day} onChange={setDay} />
         ))}
       <WorkoutSessionCard sets={todaysSets} />
-      <LiftProgressChart userId={user.id} />
+      <Suspense fallback={null}>
+        <LiftProgressChart userId={user.id} />
+      </Suspense>
 
       {loading || cycle === null ? (
         <div className="flex justify-center py-10">

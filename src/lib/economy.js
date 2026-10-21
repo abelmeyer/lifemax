@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import { todayStr, addDaysStr, weekStartStr } from "./dateUtils";
-import { fetchHabitLogsInRange, fetchHabitSettings, fetchSwimCountForWeek, habitMet, countHabitsMet, WEEKLY_SWIM_TARGET } from "./habits";
-import { fetchTrainingActivity, workedOutOn } from "./activity";
+import { fetchHabitLogsInRange, fetchHabitSettings, habitMet, countHabitsMet, WEEKLY_SWIM_TARGET } from "./habits";
+import { fetchTrainingActivity, fetchSwimDates, workedOutOn, serialized } from "./activity";
 
 const DAILY_HABITS = ["pushups", "situps", "pullups"];
 const AURA = { workout: 50, habit: 20, swimWeekly: 40, streakDay: 10 };
@@ -59,74 +59,112 @@ async function saveEconomy(userId, patch) {
   return data;
 }
 
-// Legacy (pre-2026-10-19) prestige rule: days with a workout and 2+ habits.
-async function countFullDaysInWeek(userId, weekStart, pullupTarget, today) {
-  const weekEnd = addDaysStr(weekStart, 6);
-  const [logs, activity] = await Promise.all([
-    fetchHabitLogsInRange(userId, weekStart, weekEnd),
-    fetchTrainingActivity(userId, weekStart, weekEnd),
-  ]);
-  const logsByDate = {};
-  for (const l of logs) logsByDate[l.date] = l;
+// The pure rules below read from one pre-fetched activity window rather than
+// querying per week, so a multi-week backfill costs no extra round trips.
 
+// Legacy (pre-2026-10-19) prestige rule: days with a workout and 2+ habits.
+function countFullDaysInWeek(activity, logsByDate, weekStart, pullupTarget, today) {
   let count = 0;
   for (let i = 0; i < 7; i++) {
     const d = addDaysStr(weekStart, i);
     if (d > today) break;
-    const workoutDone = workedOutOn(activity, d);
-    const met = countHabitsMet(logsByDate[d] ?? null, pullupTarget);
-    if (workoutDone && met >= 2) count++;
+    if (workedOutOn(activity, d) && countHabitsMet(logsByDate[d] ?? null, pullupTarget) >= 2) count++;
   }
   return count;
 }
 
 // Lifting sessions (distinct days with a set) and cardio sessions (rows) in
 // a Monday-start week, through today.
-async function countWeekTraining(userId, weekStart, today) {
-  const weekEnd = addDaysStr(weekStart, 6);
-  const activity = await fetchTrainingActivity(userId, weekStart, weekEnd < today ? weekEnd : today);
+function countWeekTraining(activity, weekStart, today) {
+  let lifts = 0;
   let cardio = 0;
-  for (const n of activity.cardioByDate.values()) cardio += n;
-  return { lifts: activity.liftDates.size, cardio };
+  for (let i = 0; i < 7; i++) {
+    const d = addDaysStr(weekStart, i);
+    if (d > today) break;
+    if (activity.liftDates.has(d)) lifts++;
+    cardio += activity.cardioByDate.get(d) ?? 0;
+  }
+  return { lifts, cardio };
 }
 
 function meetsPrestigeTarget({ lifts, cardio }) {
   return lifts >= PRESTIGE_LIFTS_NEEDED && cardio >= PRESTIGE_CARDIO_NEEDED;
 }
 
-async function weekEarnsPrestige(userId, weekStart, pullupTarget, today) {
+function weekEarnsPrestige(activity, logsByDate, weekStart, pullupTarget, today) {
   if (weekStart < PRESTIGE_V2_FIRST_WEEK) {
-    return (await countFullDaysInWeek(userId, weekStart, pullupTarget, today)) >= LEGACY_PRESTIGE_DAYS_NEEDED;
+    return countFullDaysInWeek(activity, logsByDate, weekStart, pullupTarget, today) >= LEGACY_PRESTIGE_DAYS_NEEDED;
   }
-  return meetsPrestigeTarget(await countWeekTraining(userId, weekStart, today));
+  return meetsPrestigeTarget(countWeekTraining(activity, weekStart, today));
+}
+
+function minDate(...dates) {
+  return dates.filter(Boolean).reduce((a, b) => (b < a ? b : a));
 }
 
 /**
  * Backfills aura/prestige for any unevaluated past days/weeks, then checks
- * "today" / "this week" live. Safe to call on every Dashboard mount.
+ * "today" / "this week" live. Safe to call on every Dashboard mount, and
+ * serialized so overlapping calls can't both pay out from the same balance.
+ *
+ * Three round trips: current state, every window it implies in one parallel
+ * batch, then a single write — skipped when nothing changed.
  */
-export async function syncEconomy(userId) {
+export const syncEconomy = serialized(async function syncEconomy(userId) {
   const today = todayStr();
-  const settings = await fetchHabitSettings(userId);
+  const yesterday = addDaysStr(today, -1);
+  const thisWeekStart = weekStartStr(today);
+  const [settings, econ] = await Promise.all([fetchHabitSettings(userId), fetchEconomy(userId)]);
   const pullupTarget = settings.pullup_target;
-  const econ = await fetchEconomy(userId);
+
+  // ---- Work out every window first, so they can all load at once ----
+  let dayCursor = econ.last_aura_evaluated_date ? addDaysStr(econ.last_aura_evaluated_date, 1) : today;
+  const dayGap = econ.last_aura_evaluated_date
+    ? Math.round((Date.parse(today) - Date.parse(econ.last_aura_evaluated_date)) / 86400000)
+    : 0;
+  if (dayGap > MAX_BACKFILL_DAYS) dayCursor = yesterday;
+
+  let lastSwimAuraWeek = econ.last_swim_aura_week;
+  let swimCursor = lastSwimAuraWeek ? addDaysStr(lastSwimAuraWeek, 7) : thisWeekStart;
+  const swimWeekGap = lastSwimAuraWeek
+    ? Math.round((Date.parse(thisWeekStart) - Date.parse(lastSwimAuraWeek)) / (7 * 86400000))
+    : 0;
+  if (swimWeekGap > MAX_BACKFILL_WEEKS) swimCursor = thisWeekStart;
+
+  // Never evaluated before: settle every earlier week as-is and start
+  // tracking from this one. Without a baseline the backfill below has
+  // nothing to resume from, so a week completed on Sunday and first seen on
+  // Monday would be skipped for good.
+  let lastPrestigeWeek = econ.last_prestige_evaluated_week ?? addDaysStr(thisWeekStart, -7);
+  let prestigeCursor = addDaysStr(lastPrestigeWeek, 7);
+  const prestigeWeekGap = Math.round((Date.parse(thisWeekStart) - Date.parse(lastPrestigeWeek)) / (7 * 86400000));
+  if (prestigeWeekGap > MAX_BACKFILL_WEEKS) prestigeCursor = thisWeekStart;
+
+  const auraBackfill = dayCursor < today;
+  const prestigeBackfill = prestigeCursor < thisWeekStart;
+  // Habit logs only matter for aura days and legacy-rule prestige weeks.
+  const legacyWeeks = prestigeBackfill && prestigeCursor < PRESTIGE_V2_FIRST_WEEK;
+  const activityStart = minDate(auraBackfill && dayCursor, prestigeBackfill && prestigeCursor, thisWeekStart, today);
+  const logsStart = minDate(auraBackfill && dayCursor, legacyWeeks && prestigeCursor, today);
+
+  const [logs, activity, swimDates] = await Promise.all([
+    fetchHabitLogsInRange(userId, logsStart, today),
+    fetchTrainingActivity(userId, activityStart, today),
+    fetchSwimDates(userId, minDate(swimCursor, thisWeekStart), addDaysStr(thisWeekStart, 6)),
+  ]);
+  const logsByDate = {};
+  for (const l of logs) logsByDate[l.date] = l;
+  const swimsByWeek = {};
+  for (const d of swimDates) {
+    const w = weekStartStr(d);
+    swimsByWeek[w] = (swimsByWeek[w] ?? 0) + 1;
+  }
 
   let auraGained = 0;
   let lastAuraDate = econ.last_aura_evaluated_date;
 
   // ---- Aura: atomic backfill for fully-elapsed past days ----
-  let dayCursor = econ.last_aura_evaluated_date ? addDaysStr(econ.last_aura_evaluated_date, 1) : today;
-  const dayGap = econ.last_aura_evaluated_date
-    ? Math.round((Date.parse(today) - Date.parse(econ.last_aura_evaluated_date)) / 86400000)
-    : 0;
-  if (dayGap > MAX_BACKFILL_DAYS) dayCursor = addDaysStr(today, -1);
-
-  if (dayCursor < today) {
-    const logs = await fetchHabitLogsInRange(userId, dayCursor, addDaysStr(today, -1));
-    const logsByDate = {};
-    for (const l of logs) logsByDate[l.date] = l;
-    const activity = await fetchTrainingActivity(userId, dayCursor, addDaysStr(today, -1));
-
+  if (auraBackfill) {
     while (dayCursor < today) {
       const log = logsByDate[dayCursor] ?? null;
       const workoutDone = workedOutOn(activity, dayCursor);
@@ -136,14 +174,13 @@ export async function syncEconomy(userId) {
       if (workoutDone && metHabits.length >= 2) auraGained += AURA.streakDay;
       dayCursor = addDaysStr(dayCursor, 1);
     }
-    lastAuraDate = addDaysStr(today, -1);
+    lastAuraDate = yesterday;
   }
 
   // ---- Aura: incremental flags for "today" — each component pays once ----
-  let flags = econ.today_aura_date === today ? { ...econ.today_aura_flags } : {};
-  const todaysLog = (await fetchHabitLogsInRange(userId, today, today))[0] ?? null;
-  const todaysActivity = await fetchTrainingActivity(userId, today, today);
-  const workoutDoneToday = workedOutOn(todaysActivity, today);
+  const flags = econ.today_aura_date === today ? { ...econ.today_aura_flags } : {};
+  const todaysLog = logsByDate[today] ?? null;
+  const workoutDoneToday = workedOutOn(activity, today);
   const metToday = DAILY_HABITS.filter((h) => habitMet(h, todaysLog, pullupTarget));
 
   if (workoutDoneToday && !flags.workout) {
@@ -162,26 +199,14 @@ export async function syncEconomy(userId) {
   }
 
   // ---- Aura: weekly swim bonus, paid once per week the target is hit ----
-  const thisWeekStart = weekStartStr(today);
-  let lastSwimAuraWeek = econ.last_swim_aura_week;
-  let swimCursor = lastSwimAuraWeek ? addDaysStr(lastSwimAuraWeek, 7) : thisWeekStart;
-  const swimWeekGap = lastSwimAuraWeek
-    ? Math.round((Date.parse(thisWeekStart) - Date.parse(lastSwimAuraWeek)) / (7 * 86400000))
-    : 0;
-  if (swimWeekGap > MAX_BACKFILL_WEEKS) swimCursor = thisWeekStart;
-
   while (swimCursor < thisWeekStart) {
-    const count = await fetchSwimCountForWeek(userId, swimCursor);
-    if (count >= WEEKLY_SWIM_TARGET) auraGained += AURA.swimWeekly;
+    if ((swimsByWeek[swimCursor] ?? 0) >= WEEKLY_SWIM_TARGET) auraGained += AURA.swimWeekly;
     lastSwimAuraWeek = swimCursor;
     swimCursor = addDaysStr(swimCursor, 7);
   }
-  if (lastSwimAuraWeek !== thisWeekStart) {
-    const count = await fetchSwimCountForWeek(userId, thisWeekStart);
-    if (count >= WEEKLY_SWIM_TARGET) {
-      auraGained += AURA.swimWeekly;
-      lastSwimAuraWeek = thisWeekStart;
-    }
+  if (lastSwimAuraWeek !== thisWeekStart && (swimsByWeek[thisWeekStart] ?? 0) >= WEEKLY_SWIM_TARGET) {
+    auraGained += AURA.swimWeekly;
+    lastSwimAuraWeek = thisWeekStart;
   }
 
   // ---- Prestige: +1/week for 3+ lifting and 2+ cardio sessions (legacy
@@ -189,19 +214,8 @@ export async function syncEconomy(userId) {
   // miss just don't add anything. ----
   let prestigeGained = 0;
   let prestigeLevel = econ.prestige_level;
-  // Never evaluated before: settle every earlier week as-is and start
-  // tracking from this one. Without a baseline the backfill below has
-  // nothing to resume from, so a week completed on Sunday and first seen on
-  // Monday would be skipped for good.
-  let lastPrestigeWeek = econ.last_prestige_evaluated_week ?? addDaysStr(thisWeekStart, -7);
-  let prestigeCursor = lastPrestigeWeek ? addDaysStr(lastPrestigeWeek, 7) : thisWeekStart;
-  const prestigeWeekGap = lastPrestigeWeek
-    ? Math.round((Date.parse(thisWeekStart) - Date.parse(lastPrestigeWeek)) / (7 * 86400000))
-    : 0;
-  if (prestigeWeekGap > MAX_BACKFILL_WEEKS) prestigeCursor = thisWeekStart;
-
   while (prestigeCursor < thisWeekStart) {
-    if (await weekEarnsPrestige(userId, prestigeCursor, pullupTarget, today)) {
+    if (weekEarnsPrestige(activity, logsByDate, prestigeCursor, pullupTarget, today)) {
       prestigeLevel += 1;
       prestigeGained += 1;
     }
@@ -212,7 +226,7 @@ export async function syncEconomy(userId) {
   // Always compute this week's progress live — both to decide whether to
   // award prestige now, and so the Dashboard can show an accurate
   // progress bar even after the award already landed this week.
-  const week = await countWeekTraining(userId, thisWeekStart, today);
+  const week = countWeekTraining(activity, thisWeekStart, today);
   const metThisWeek = meetsPrestigeTarget(week);
   if (lastPrestigeWeek !== thisWeekStart && metThisWeek) {
     prestigeLevel += 1;
@@ -220,7 +234,7 @@ export async function syncEconomy(userId) {
     lastPrestigeWeek = thisWeekStart;
   }
 
-  const saved = await saveEconomy(userId, {
+  const patch = {
     aura_balance: econ.aura_balance + auraGained,
     prestige_level: prestigeLevel,
     last_aura_evaluated_date: lastAuraDate,
@@ -228,7 +242,12 @@ export async function syncEconomy(userId) {
     today_aura_flags: flags,
     last_swim_aura_week: lastSwimAuraWeek,
     last_prestige_evaluated_week: lastPrestigeWeek,
-  });
+  };
+  // Most visits change nothing — skip the write entirely then.
+  const unchanged =
+    Object.entries(patch).every(([k, v]) => k === "today_aura_flags" || econ[k] === v) &&
+    JSON.stringify(flags) === JSON.stringify(econ.today_aura_flags ?? {});
+  const saved = unchanged ? econ : await saveEconomy(userId, patch);
 
   return {
     economy: saved,
@@ -244,7 +263,7 @@ export async function syncEconomy(userId) {
       complete: metThisWeek || lastPrestigeWeek === thisWeekStart,
     },
   };
-}
+});
 
 export async function fetchStoreItems() {
   const { data, error } = await supabase
@@ -327,17 +346,14 @@ export async function unequipItem(userId, item) {
 
 // Full store_items rows for whatever this user currently has equipped —
 // what the avatar renders as cosmetic layers.
+// One round trip: the owned_items -> store_items foreign key lets PostgREST
+// embed the item rows directly.
 export async function fetchEquippedItems(userId) {
-  const { data: owned, error: ownedErr } = await supabase
+  const { data, error } = await supabase
     .from("owned_items")
-    .select("item_id")
+    .select("store_items(*)")
     .eq("user_id", userId)
     .eq("equipped", true);
-  if (ownedErr) throw ownedErr;
-  if (!owned || owned.length === 0) return [];
-
-  const ids = owned.map((o) => o.item_id);
-  const { data: items, error } = await supabase.from("store_items").select("*").in("id", ids);
   if (error) throw error;
-  return items ?? [];
+  return (data ?? []).map((r) => r.store_items).filter(Boolean);
 }

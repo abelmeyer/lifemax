@@ -13,6 +13,18 @@ export async function fetchPhotos(userId) {
   return data ?? [];
 }
 
+// Just the newest photo — the Dashboard tile needs one, not the gallery.
+export async function fetchLatestPhoto(userId) {
+  const { data, error } = await supabase
+    .from("photos")
+    .select("*")
+    .eq("user_id", userId)
+    .order("date", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
 export async function uploadPhoto({ userId, date, file }) {
   const blob = await compressImage(file);
   const path = `${userId}/${date}.jpg`;

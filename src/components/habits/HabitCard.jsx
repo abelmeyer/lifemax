@@ -15,6 +15,7 @@ export default function HabitCard({
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetDraft, setTargetDraft] = useState(String(target ?? ""));
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     setDraft(String(value ?? 0));
@@ -41,8 +42,13 @@ export default function HabitCard({
     const num = parseInt(draft, 10);
     if (Number.isNaN(num) || num < 0) return;
     setSaving(true);
+    setSaveError("");
     try {
       await onSave(num);
+    } catch {
+      // Without this the draft kept showing the new number as if it had
+      // saved, and the failure only surfaced as an unhandled rejection.
+      setSaveError("Couldn't save — try again");
     } finally {
       setSaving(false);
     }
@@ -52,7 +58,13 @@ export default function HabitCard({
     const num = parseInt(targetDraft, 10);
     if (Number.isNaN(num) || num <= 0) return;
     setEditingTarget(false);
-    await onTargetChange(num);
+    setSaveError("");
+    try {
+      await onTargetChange(num);
+    } catch {
+      setTargetDraft(String(target ?? ""));
+      setSaveError("Couldn't update target — try again");
+    }
   }
 
   return (
@@ -135,6 +147,7 @@ export default function HabitCard({
           {saving ? "Saving…" : "Log"}
         </button>
       </div>
+      {saveError && <p className="mt-2 text-[12px] text-[#ff6b6b]">{saveError}</p>}
     </div>
   );
 }

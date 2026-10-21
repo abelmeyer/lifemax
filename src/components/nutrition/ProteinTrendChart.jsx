@@ -24,9 +24,12 @@ export default function ProteinTrendChart({ userId }) {
 
   useEffect(() => {
     let mounted = true;
-    fetchProteinTrend(userId).then((data) => {
-      if (mounted) setPoints(data);
-    });
+    fetchProteinTrend(userId)
+      .then((data) => {
+        if (mounted) setPoints(data);
+      })
+      // A failed trend read hides the chart, same as having no data yet.
+      .catch(() => {});
     return () => {
       mounted = false;
     };

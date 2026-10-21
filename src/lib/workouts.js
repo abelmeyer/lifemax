@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { todayStr } from "./dateUtils";
+import { MISSING_COLUMN_CODES } from "./training";
 
 export async function fetchExercises() {
   const { data, error } = await supabase
@@ -55,19 +56,32 @@ export function summarizeHistory(sets, today) {
   return { todaysSets, lastSets, lastDate, lastBest, bestWeight, pastBestWeight };
 }
 
-export async function logSet({ userId, exerciseId, setNumber, weightLbs, reps }) {
-  const { data, error } = await supabase
-    .from("workout_sets")
-    .insert({
-      user_id: userId,
-      exercise_id: exerciseId,
-      date: todayStr(),
-      set_number: setNumber,
-      weight_lbs: weightLbs,
-      reps,
-    })
-    .select()
-    .single();
+// Flipped the first time an insert reports program_day doesn't exist (the
+// Sprint 13 migration hasn't run), so later sets skip the doomed attempt.
+let programDayColumnMissing = false;
+
+// programDay ("ppl-1", "fb-A", …) records which program day the set belongs
+// to; the exercise alone can't, since exercises are shared across days and
+// cycles. It's optional — logging a set never fails because of it.
+export async function logSet({ userId, exerciseId, setNumber, weightLbs, reps, programDay = null }) {
+  const row = {
+    user_id: userId,
+    exercise_id: exerciseId,
+    date: todayStr(),
+    set_number: setNumber,
+    weight_lbs: weightLbs,
+    reps,
+  };
+  const insert = (r) => supabase.from("workout_sets").insert(r).select().single();
+
+  if (programDay && !programDayColumnMissing) {
+    const { data, error } = await insert({ ...row, program_day: programDay });
+    if (!error) return data;
+    if (!MISSING_COLUMN_CODES.has(error.code)) throw error;
+    programDayColumnMissing = true;
+  }
+
+  const { data, error } = await insert(row);
   if (error) throw error;
   return data;
 }

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { CustomizationProvider, useCustomization } from "./lib/CustomizationContext";
@@ -6,15 +7,23 @@ import { AccomplishmentsProvider } from "./lib/AccomplishmentsContext";
 import AppShell from "./components/AppShell";
 import Login from "./screens/Login";
 import Dashboard from "./screens/Dashboard";
-import Workouts from "./screens/Workouts";
-import Habits from "./screens/Habits";
-import Nutrition from "./screens/Nutrition";
-import Photos from "./screens/Photos";
-import Store from "./screens/Store";
-import AvatarSetup from "./screens/AvatarSetup";
-import Settings from "./screens/Settings";
-import Accomplishments from "./screens/Accomplishments";
-import Gratitude from "./screens/Gratitude";
+import { lazyWithPreload, preloadWhenIdle } from "./lib/lazyWithPreload";
+
+// Dashboard is where the app opens, so it ships in the main bundle; every
+// other screen is its own chunk. They're all prefetched once the app is idle
+// (preloadWhenIdle below), so switching tabs is still instant — the split
+// just keeps them off the critical path of the first paint.
+const Workouts = lazyWithPreload(() => import("./screens/Workouts"));
+const Habits = lazyWithPreload(() => import("./screens/Habits"));
+const Nutrition = lazyWithPreload(() => import("./screens/Nutrition"));
+const Photos = lazyWithPreload(() => import("./screens/Photos"));
+const Store = lazyWithPreload(() => import("./screens/Store"));
+const AvatarSetup = lazyWithPreload(() => import("./screens/AvatarSetup"));
+const Settings = lazyWithPreload(() => import("./screens/Settings"));
+const Accomplishments = lazyWithPreload(() => import("./screens/Accomplishments"));
+const Gratitude = lazyWithPreload(() => import("./screens/Gratitude"));
+
+preloadWhenIdle([Workouts, Habits, Nutrition, Photos, Store, Gratitude, Accomplishments, Settings, AvatarSetup]);
 import DevPreview, {
   DevSetupPreview,
   DevSettingsPreview,
@@ -23,7 +32,16 @@ import DevPreview, {
   DevDayDetailPreview,
   DevJournalPreview,
   DevDashboardPreview,
+  DevWorkoutsScreenPreview,
 } from "./screens/DevPreview";
+
+function FullScreenSpinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+    </div>
+  );
+}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -55,7 +73,13 @@ function SetupGate({ children }) {
     );
   }
 
-  if (needsSetup) return <AvatarSetup mode="setup" />;
+  if (needsSetup) {
+    return (
+      <Suspense fallback={<FullScreenSpinner />}>
+        <AvatarSetup mode="setup" />
+      </Suspense>
+    );
+  }
 
   return children;
 }
@@ -77,6 +101,7 @@ function AppRoutes() {
       {import.meta.env.DEV && <Route path="/preview/day" element={<DevDayDetailPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/journal" element={<DevJournalPreview />} />}
       {import.meta.env.DEV && <Route path="/preview/dashboard" element={<DevDashboardPreview />} />}
+      {import.meta.env.DEV && <Route path="/preview/workouts" element={<DevWorkoutsScreenPreview />} />}
       <Route
         path="/"
         element={

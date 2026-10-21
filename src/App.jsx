@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { CustomizationProvider, useCustomization } from "./lib/CustomizationContext";
@@ -24,16 +24,24 @@ const Accomplishments = lazyWithPreload(() => import("./screens/Accomplishments"
 const Gratitude = lazyWithPreload(() => import("./screens/Gratitude"));
 
 preloadWhenIdle([Workouts, Habits, Nutrition, Photos, Store, Gratitude, Accomplishments, Settings, AvatarSetup]);
-import DevPreview, {
-  DevSetupPreview,
-  DevSettingsPreview,
-  DevBadgesPreview,
-  DevWorkoutPreview,
-  DevDayDetailPreview,
-  DevJournalPreview,
-  DevDashboardPreview,
-  DevWorkoutsScreenPreview,
-} from "./screens/DevPreview";
+
+// DEV-only visual harness. Loaded through a dynamic import that only exists
+// in dev builds: a static import kept DevPreview in the production module
+// graph, and with it every screen it renders (Workouts, Settings, ...),
+// pulling them back into the main bundle even though no route used them.
+const DEV_PREVIEW_ROUTES = import.meta.env.DEV
+  ? [
+      ["/preview", "default"],
+      ["/preview/setup", "DevSetupPreview"],
+      ["/preview/settings", "DevSettingsPreview"],
+      ["/preview/badges", "DevBadgesPreview"],
+      ["/preview/workout", "DevWorkoutPreview"],
+      ["/preview/day", "DevDayDetailPreview"],
+      ["/preview/journal", "DevJournalPreview"],
+      ["/preview/dashboard", "DevDashboardPreview"],
+      ["/preview/workouts", "DevWorkoutsScreenPreview"],
+    ].map(([path, name]) => [path, lazy(() => import("./screens/DevPreview").then((m) => ({ default: m[name] })))])
+  : [];
 
 function FullScreenSpinner() {
   return (
@@ -93,15 +101,17 @@ function AppRoutes() {
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login />}
       />
-      {import.meta.env.DEV && <Route path="/preview" element={<DevPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/setup" element={<DevSetupPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/settings" element={<DevSettingsPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/badges" element={<DevBadgesPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/workout" element={<DevWorkoutPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/day" element={<DevDayDetailPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/journal" element={<DevJournalPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/dashboard" element={<DevDashboardPreview />} />}
-      {import.meta.env.DEV && <Route path="/preview/workouts" element={<DevWorkoutsScreenPreview />} />}
+      {DEV_PREVIEW_ROUTES.map(([path, Preview]) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <Suspense fallback={<FullScreenSpinner />}>
+              <Preview />
+            </Suspense>
+          }
+        />
+      ))}
       <Route
         path="/"
         element={
